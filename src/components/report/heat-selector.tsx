@@ -1,21 +1,9 @@
 "use client";
 
-import { Flame, Info, Snowflake, SunMedium } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import { HEAT_STATES, type HeatState } from "@/lib/domain/heat";
+import { PROBLEMS, type Problem } from "@/lib/domain/heat";
 import { cn } from "@/lib/utils";
-
-const stateClass: Record<HeatState, string> = {
-  fresco: "border-heat-fresco bg-heat-fresco-soft",
-  calor: "border-heat-calor bg-heat-calor-soft",
-  infierno: "border-heat-infierno bg-heat-infierno-soft",
-};
-
-const icons = {
-  fresco: Snowflake,
-  calor: SunMedium,
-  infierno: Flame,
-};
 
 export function HeatSelector({
   dictionary,
@@ -25,47 +13,54 @@ export function HeatSelector({
 }: {
   dictionary: Dictionary;
   label: string;
-  value: HeatState;
-  onChange: (state: HeatState) => void;
+  value: Problem[];
+  onChange: (problems: Problem[]) => void;
 }) {
-  const selectedCopy = dictionary.states[value];
+  function toggle(problem: Problem) {
+    if (value.includes(problem)) {
+      onChange(value.filter((p) => p !== problem));
+    } else {
+      onChange([...value, problem]);
+    }
+  }
 
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-2 text-sm font-semibold">{label}</legend>
-      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-border">
-        {HEAT_STATES.map((state) => {
-          const Icon = icons[state];
-          const selected = state === value;
+      <div className="flex flex-col gap-2">
+        {PROBLEMS.map((problem) => {
+          const selected = value.includes(problem);
+          const problemLabel = dictionary.problems[toCamelCase(problem)];
           return (
             <button
               aria-pressed={selected}
               className={cn(
-                "selection-flow flex min-h-14 flex-col items-center justify-center gap-1 bg-surface-raised px-1.5 py-2 text-sm font-semibold transition duration-200 ease-out focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary",
-                selected ? `${stateClass[state]} text-[var(--heat-soft-foreground)]` : "text-foreground hover:bg-surface",
+                "selection-flow flex min-h-11 items-center gap-3 rounded-md border border-border bg-surface-raised px-3 py-2.5 text-left text-sm transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                selected ? "border-primary bg-primary/10 font-medium" : "text-foreground hover:bg-surface",
               )}
-              data-testid={`heat-${state}`}
-              key={state}
-              onClick={() => onChange(state)}
+              key={problem}
+              onClick={() => toggle(problem)}
               type="button"
             >
-              <Icon aria-hidden="true" className="size-5" />
-              {dictionary.states[state].label}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border transition duration-200 ease-out",
+                  selected ? "border-primary bg-primary" : "border-border",
+                )}
+              >
+                {selected ? <CheckCircle2 className="size-[13px] text-white" strokeWidth={3} /> : null}
+              </span>
+              {problemLabel}
             </button>
           );
         })}
       </div>
-      <div
-        className={cn(
-          "selection-panel-flow relative flex items-start gap-2 overflow-hidden rounded-md border px-3 py-2 text-[0.6875rem] leading-4 text-[var(--heat-helper-foreground)]",
-          stateClass[value],
-          value === "infierno" && "heat-shimmer",
-        )}
-        key={value}
-      >
-        <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-[var(--heat-helper-foreground)]" />
-        <span>{selectedCopy.description}</span>
-      </div>
     </fieldset>
   );
+}
+
+function toCamelCase(snake: string): keyof Dictionary["problems"] {
+  const camel = snake.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  return camel as keyof Dictionary["problems"];
 }
