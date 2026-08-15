@@ -1,16 +1,13 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { buildCarExplorerSelection, buildDashboardData, DASHBOARD_LIMITS, DASHBOARD_TIME, getCarSeries } from "@/lib/domain/dashboard";
 import { getRangeWindow, type DashboardRange } from "@/lib/domain/ranges";
 import {
   DUPLICATE_WINDOW_MINUTES,
   isDuplicateCandidate,
-  isRetiredCarCode,
   NO_CAR_ORIGIN_WINDOW_MINUTES,
   RATE_LIMIT_MAX_REPORTS,
   type Report,
   type ReportInput,
 } from "@/lib/domain/reports";
-import { ESTIMATED_TOTAL_CARS } from "@/lib/domain/fleet-estimates";
 import { isMetroLine, type MetroLine } from "@/lib/domain/lines";
 import {
   createAbuseKey,
@@ -27,7 +24,7 @@ import { seedReports } from "./seed-data";
 
 type CreateResult =
   | { ok: true; report: Report; undoToken: string }
-  | { ok: false; reason: "duplicate" | "invalid" | "rate_limited" | "retired_series" };
+  | { ok: false; reason: "duplicate" | "invalid" | "rate_limited" };
 
 type CreateReportRpcRow = {
   ok: boolean;
@@ -35,7 +32,7 @@ type CreateReportRpcRow = {
   id: string | null;
   line: MetroLine | null;
   car: string | null;
-  state: ReportInput["state"] | null;
+  problems: ReportInput["problems"] | null;
   created_at: string | null;
   hidden_at: string | null;
 };
@@ -59,7 +56,7 @@ type HomeSnapshotRow = {
     id: string;
     line: MetroLine;
     car: string | null;
-    state: ReportInput["state"];
+    problems: ReportInput["problems"];
     created_at: string;
   }> | null;
 };
@@ -110,49 +107,13 @@ export function getSupabase() {
   return supabaseServiceClient;
 }
 
-export function getMemoryDashboard(options: DashboardOptions) {
-  const now = options.now ?? new Date();
-  const { start, end } = getRangeWindow(options.range, now);
-  const summerStart = getRangeWindow("summer", now).start;
-  const queryStart = summerStart < start ? summerStart : start;
-  const selectedLines = options.lines?.length ? options.lines : isMetroLine(options.line) ? [options.line] : null;
-  const selectedCarSeries = normalizeCarSeries(options.carSeries);
-  const reports = getMemoryReports()
-    .filter((report) => report.createdAt >= queryStart && report.createdAt <= end)
-    .filter((report) => !selectedLines || selectedLines.includes(report.line))
-    .filter((report) => matchesCarSeries(report, selectedCarSeries));
-  return buildDashboardData(reports, now, ESTIMATED_TOTAL_CARS, options.range);
-}
-
 function normalizeCarSeries(series: number[] | null | undefined) {
   if (!series?.length) return null;
   return new Set(series.filter((item) => Number.isInteger(item) && item >= 0));
 }
 
-function matchesCarSeries(report: Report, selectedCarSeries: Set<number> | null) {
-  if (!selectedCarSeries) return true;
-  if (!report.car) return false;
-  const series = getCarSeries(report.car);
-  return series !== null && selectedCarSeries.has(series);
-}
-
-export function getMemoryCarDetail(options: DashboardOptions & { car: string }) {
-  const now = options.now ?? new Date();
-  const window = getRangeWindow(options.range, now);
-  const selectedLines = options.lines?.length ? options.lines : isMetroLine(options.line) ? [options.line] : null;
-  const selectedCarSeries = normalizeCarSeries(options.carSeries);
-  const reports = getMemoryReports().filter((report) =>
-    !report.hiddenAt &&
-    report.createdAt >= window.start &&
-    report.createdAt <= window.end &&
-    (!selectedLines || selectedLines.includes(report.line)) &&
-    matchesCarSeries(report, selectedCarSeries),
-  );
-  return buildCarExplorerSelection(options.car, reports, now, options.range);
-}
-
 export async function getHomeSnapshot(now = new Date()): Promise<HomeSnapshot> {
-  const start = new Date(now.getTime() - DASHBOARD_TIME.hoursPerDay * DASHBOARD_TIME.millisecondsPerHour);
+  const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const supabase = getSupabase();
 
   if (!supabase) {
@@ -161,7 +122,7 @@ export async function getHomeSnapshot(now = new Date()): Promise<HomeSnapshot> {
       .toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return {
       reportsLastDay: recentReports.length,
-      recentReports: recentReports.slice(0, DASHBOARD_LIMITS.recentReportCount),
+      recentReports: recentReports.slice(0, 20),
     };
   }
 
@@ -169,7 +130,7 @@ export async function getHomeSnapshot(now = new Date()): Promise<HomeSnapshot> {
     .rpc("dashboard_home_snapshot", {
       input_start: start.toISOString(),
       input_end: now.toISOString(),
-      input_limit: DASHBOARD_LIMITS.recentReportCount,
+      input_limit: 20,
     })
     .single();
   if (error) throw error;
@@ -181,7 +142,7 @@ export async function getHomeSnapshot(now = new Date()): Promise<HomeSnapshot> {
       id: report.id,
       line: report.line,
       car: report.car,
-      state: report.state,
+      problems: report.problems,
       createdAt: new Date(report.created_at),
       hiddenAt: null,
     })),
@@ -193,10 +154,6 @@ export async function createReportForRequest(
   fingerprint: RequestFingerprint | Request | null,
   now = new Date(),
 ): Promise<CreateResult> {
-  if (input.car && isRetiredCarCode(input.car)) {
-    return { ok: false, reason: "retired_series" };
-  }
-
   const requestFingerprint = fingerprint instanceof Request ? getRequestFingerprint(fingerprint) : fingerprint;
   const abuseKey = requestFingerprint ? createAbuseKey(requestFingerprint) : null;
   const undoToken = createUndoToken();
@@ -225,9 +182,9 @@ export async function createReportForRequest(
 
     const report: MemoryReport = {
       id: crypto.randomUUID(),
-      line: input.line,
+      line: input.line as MetroLine,
       car: input.car ?? null,
-      state: input.state,
+      problems: input.problems,
       createdAt: now,
       hiddenAt: null,
       abuseKey,
@@ -243,7 +200,7 @@ export async function createReportForRequest(
     .rpc("create_report", {
       input_line: input.line,
       input_car: input.car,
-      input_state: input.state,
+      input_problems: input.problems,
       input_abuse_key: abuseKey,
       input_undo_token_hash: undoTokenHash,
       input_undo_expires_at: undoExpiresAt.toISOString(),
@@ -257,10 +214,10 @@ export async function createReportForRequest(
   if (error) throw error;
   const data = rpcData as CreateReportRpcRow;
   if (!data.ok) {
-    return { ok: false, reason: data.reason as "duplicate" | "invalid" | "rate_limited" | "retired_series" };
+    return { ok: false, reason: data.reason as "duplicate" | "invalid" | "rate_limited" };
   }
 
-  if (!data.id || !data.line || !data.state || !data.created_at) {
+  if (!data.id || !data.line || !data.problems || !data.created_at) {
     throw new Error("Report creation returned an incomplete row.");
   }
 
@@ -271,7 +228,7 @@ export async function createReportForRequest(
       id: data.id,
       line: data.line,
       car: data.car,
-      state: data.state,
+      problems: data.problems,
       createdAt: new Date(data.created_at),
       hiddenAt: data.hidden_at ? new Date(data.hidden_at) : null,
     },
@@ -337,3 +294,13 @@ export async function getCarSuggestions(line: string) {
     .map(([car]) => car)
     .slice(0, 8);
 }
+
+export function isMetroLineValue(value: unknown): value is MetroLine {
+  return isMetroLine(value);
+}
+
+export function normalizeCarSeriesFilter(series: number[] | null | undefined) {
+  return normalizeCarSeries(series);
+}
+
+void getRangeWindow;
