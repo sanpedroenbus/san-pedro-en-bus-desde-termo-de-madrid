@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
+  cacheComponents: false,
   allowedDevOrigins: ["127.0.0.1"],
   devIndicators: false,
   async headers() {
