@@ -1,4 +1,5 @@
 "use client";
+// forzar recompilación
 
 import { LINE_COLORS, LINE_LABELS, METRO_LINES, type MetroLine } from "@/lib/domain/lines";
 import { cn } from "@/lib/utils";
