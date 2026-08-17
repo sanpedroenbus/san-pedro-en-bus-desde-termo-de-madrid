@@ -1,4 +1,5 @@
 "use client";
+// forzar recompilación
 
 import { CheckCircle2 } from "lucide-react";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
