@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { buildDashboardData, buildCarExplorerSelection } from "@/lib/domain/dashboard";
 import { getRangeWindow, type DashboardRange } from "@/lib/domain/ranges";
 import {
   DUPLICATE_WINDOW_MINUTES,
@@ -35,14 +36,6 @@ type CreateReportRpcRow = {
   problems: ReportInput["problems"] | null;
   created_at: string | null;
   hidden_at: string | null;
-};
-
-type DashboardOptions = {
-  range: DashboardRange;
-  line?: string | null;
-  lines?: MetroLine[] | null;
-  carSeries?: number[] | null;
-  now?: Date;
 };
 
 export type HomeSnapshot = {
@@ -107,9 +100,27 @@ export function getSupabase() {
   return supabaseServiceClient;
 }
 
-function normalizeCarSeries(series: number[] | null | undefined) {
-  if (!series?.length) return null;
-  return new Set(series.filter((item) => Number.isInteger(item) && item >= 0));
+export function getMemoryDashboard(options: {
+  range: DashboardRange;
+  lines?: MetroLine[] | null;
+  carSeries?: number[] | null;
+  now?: Date;
+}) {
+  const now = options.now ?? new Date();
+  const memoryReports = getMemoryReports();
+  return buildDashboardData(memoryReports, now, {} as Record<MetroLine, number>, options.range);
+}
+
+export function getMemoryCarDetail(options: {
+  range: DashboardRange;
+  lines?: MetroLine[] | null;
+  carSeries?: number[] | null;
+  car: string;
+  now?: Date;
+}) {
+  const now = options.now ?? new Date();
+  const memoryReports = getMemoryReports();
+  return buildCarExplorerSelection(options.car, memoryReports, now, options.range);
 }
 
 export async function getHomeSnapshot(now = new Date()): Promise<HomeSnapshot> {
@@ -298,9 +309,3 @@ export async function getCarSuggestions(line: string) {
 export function isMetroLineValue(value: unknown): value is MetroLine {
   return isMetroLine(value);
 }
-
-export function normalizeCarSeriesFilter(series: number[] | null | undefined) {
-  return normalizeCarSeries(series);
-}
-
-void getRangeWindow;
