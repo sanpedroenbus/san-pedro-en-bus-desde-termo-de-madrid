@@ -2,6 +2,7 @@ import { PROBLEMS, type Problem } from "./heat";
 import { METRO_LINES, type MetroLine } from "./lines";
 import { getRangeWindow, type DashboardRange } from "./ranges";
 import type { Report } from "./reports";
+import { APP_TIME_ZONE, getMadridStartOfDay } from "./time";
 
 export const DASHBOARD_LIMITS = {
   recentReportCount: 25,
@@ -149,4 +150,38 @@ function pushGroupedReport(groups: Map<string, Report[]>, key: string, report: R
 function buildTrend(reports: Report[], now: Date, range: DashboardRange): TrendPoint[] {
   return buildDashboardBuckets(now, range).map((bucket) => ({
     label: bucket.label,
-    reports: reports.filter((
+    reports: reports.filter((report) => report.createdAt >= bucket.start && report.createdAt < bucket.end).length,
+  }));
+}
+
+export function buildDashboardBuckets(now: Date, range: DashboardRange) {
+  const rangeWindow = getRangeWindow(range, now);
+  if (range === "today" || range === "last24Hours") {
+    const start = rangeWindow.start;
+    return Array.from({ length: DASHBOARD_TIME.hoursPerDay }, (_, hour) => {
+      const bucketStart = new Date(start.getTime() + hour * DASHBOARD_TIME.millisecondsPerHour);
+      const bucketEnd = new Date(bucketStart.getTime() + DASHBOARD_TIME.millisecondsPerHour);
+      return {
+        start: bucketStart,
+        end: bucketEnd,
+        label: bucketStart.toLocaleTimeString("es-ES", { hour: "2-digit", timeZone: APP_TIME_ZONE }),
+      };
+    });
+  }
+
+  const buckets = [];
+  for (let offset = 0; ; offset += 1) {
+    const bucketStart = getMadridStartOfDay(rangeWindow.start, offset);
+    if (bucketStart > rangeWindow.end) break;
+    const bucketEnd = getMadridStartOfDay(rangeWindow.start, offset + 1);
+    buckets.push({
+      start: bucketStart,
+      end: bucketEnd,
+      label: bucketStart.toLocaleDateString("es-ES", {
+        ...(range === "sevenDays" ? { weekday: "short" as const } : { day: "2-digit" as const, month: "short" as const }),
+        timeZone: APP_TIME_ZONE,
+      }),
+    });
+  }
+  return buckets;
+}

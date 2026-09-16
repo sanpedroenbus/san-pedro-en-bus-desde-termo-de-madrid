@@ -1,14 +1,5 @@
 import { Suspense } from "react";
-import {
-  CarSeriesChartCard,
-  HeatTrendChartCard,
-  LineCarsChartCard,
-  LineEvolutionChartCard,
-  ReportVolumeChartCard,
-  TotalReportsChartCard,
-  WorstCarsExplorerChartCards,
-  WorstHoursChartCard,
-} from "@/components/charts/dashboard-charts";
+import { HeatTrendChartCard, LineCarsChartCard, ReportVolumeChartCard, WorstCarsExplorerChartCards } from "@/components/charts/dashboard-charts";
 import { ExploreFleetPanel, LineDetailCards } from "@/components/charts/explore-detail-panels";
 import { FilterBar } from "@/components/charts/filter-bar";
 import { ExploreActionIcon } from "@/components/ui/action-icons";
@@ -60,7 +51,6 @@ async function ExploreContent({
     <main className="min-h-dvh">
       <div className="mx-auto max-w-5xl px-4 pb-5">
         <FilterBar
-          availableCarSeries={data.availableCarSeries}
           dictionary={dictionary}
           locale={lang}
           selectedCarSeries={selectedCarSeries}
@@ -77,11 +67,8 @@ async function ExploreContent({
 
         <div className="grid gap-4 lg:grid-cols-[1fr_0.82fr]">
           <div className="flex flex-col gap-4">
-            <LineEvolutionChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} selectedLines={selectedLines} selectedRange={selectedRange} />
-            <TotalReportsChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} selectedLines={selectedLines} selectedRange={selectedRange} />
             <ReportVolumeChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} selectedLines={selectedLines} />
             <LineCarsChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} selectedLines={selectedLines} />
-            <CarSeriesChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} />
             <WorstCarsExplorerChartCards
               carSeries={selectedCarSeries}
               data={data}
@@ -93,13 +80,12 @@ async function ExploreContent({
               selectedRange={selectedRange}
             />
             <HeatTrendChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} selectedLines={selectedLines} selectedRange={selectedRange} />
-            <WorstHoursChartCard data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} />
           </div>
 
           <ExploreFleetPanel data={data} dictionary={dictionary} locale={lang} rangeLabel={rangeLabel} selectedLines={selectedLines} />
         </div>
 
-        <LineDetailCards carSeries={selectedCarSeries} cards={data.lineSummaries} dictionary={dictionary} locale={lang} range={selectedRange} selectedLines={selectedLines} />
+        <LineDetailCards cards={data.lineSummaries} dictionary={dictionary} locale={lang} selectedLines={selectedLines} />
       </div>
     </main>
   );

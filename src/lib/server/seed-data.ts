@@ -1,23 +1,23 @@
-import type { HeatState } from "@/lib/domain/heat";
+import type { Problem } from "@/lib/domain/heat";
 import type { MetroLine } from "@/lib/domain/lines";
 import type { Report } from "@/lib/domain/reports";
 
 const now = new Date();
 
-const hotCars = ["M2001", "M2004", "R2401", "M2732", "R4110"];
-const l5Cars = ["M5002", "R5300", "M5120", "R5444"];
-const normalCars = ["M2201", "R3304", "M6012", "M8066", "R9010", "M2204"];
+const hotCars = ["51", "54", "12", "73", "41"];
+const l5Cars = ["02", "300", "120", "44"];
+const normalCars = ["201", "304", "12", "66", "10", "204"];
 
 function hoursAgo(hours: number) {
   return new Date(now.getTime() - hours * 3_600_000);
 }
 
-function makeReport(index: number, line: MetroLine, state: HeatState, hours: number, car: string | null): Report {
+function makeReport(index: number, line: MetroLine, problems: Problem[], hours: number, car: string | null): Report {
   return {
     id: `seed-${index}`,
     line,
-    state,
     car,
+    problems,
     createdAt: hoursAgo(hours),
     hiddenAt: null,
   };
@@ -25,21 +25,21 @@ function makeReport(index: number, line: MetroLine, state: HeatState, hours: num
 
 export const seedReports: Report[] = [
   ...Array.from({ length: 24 }, (_, index) =>
-    makeReport(index, "L1", index % 5 === 0 ? "calor" : "infierno", index * 0.55, hotCars[index % hotCars.length]),
+    makeReport(index, "LA_CAMPINA", index % 5 === 0 ? ["hacinados"] : ["chofer_trato_mal", "conduccion_temeraria"], index * 0.55, hotCars[index % hotCars.length]),
   ),
   ...Array.from({ length: 17 }, (_, index) =>
-    makeReport(100 + index, "L5", index % 4 === 0 ? "calor" : "infierno", index * 0.8, l5Cars[index % l5Cars.length]),
+    makeReport(100 + index, "SALITRILLOS", index % 4 === 0 ? ["hacinados"] : ["no_hizo_parada", "horario_sin_servicio"], index * 0.8, l5Cars[index % l5Cars.length]),
   ),
   ...Array.from({ length: 16 }, (_, index) =>
     makeReport(
       200 + index,
-      (["L2", "L3", "L6", "L8", "L10", "L12"] as MetroLine[])[index % 6],
-      index % 6 === 0 ? "calor" : "fresco",
+      (["GRANADILLA", "SAN_RAMON", "VARGAS_ARAYA", "SABANILLA"] as MetroLine[])[index % 4],
+      index % 6 === 0 ? ["hacinados"] : [],
       index * 2.5,
       index % 3 === 0 ? null : normalCars[index % normalCars.length],
     ),
   ),
-  makeReport(300, "L1", "fresco", 3.2, "M2001"),
-  makeReport(301, "L5", "fresco", 4.4, null),
-  makeReport(302, "L7", "calor", 1.6, "M7310"),
+  makeReport(300, "LA_CAMPINA", [], 3.2, "51"),
+  makeReport(301, "SALITRILLOS", [], 4.4, null),
+  makeReport(302, "BARRIO_PINTO", ["olia_mal_sucio"], 1.6, "73"),
 ];

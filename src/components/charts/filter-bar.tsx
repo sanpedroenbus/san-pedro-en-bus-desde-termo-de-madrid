@@ -4,7 +4,6 @@ import * as Popover from "@radix-ui/react-popover";
 import { ListTree, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CarSeriesSummary } from "@/lib/domain/dashboard";
 import { LINE_COLORS, METRO_LINES, type MetroLine } from "@/lib/domain/lines";
 import { TIME_RANGES, type TimeRange } from "@/lib/domain/ranges";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -14,14 +13,12 @@ import { Button } from "@/components/ui/button";
 import { CenteredPopoverPanel, StickyUtilityBar } from "@/components/ui/popover-shell";
 
 export function FilterBar({
-  availableCarSeries,
   dictionary,
   locale,
   selectedCarSeries,
   selectedLines,
   selectedRange,
 }: {
-  availableCarSeries: CarSeriesSummary[];
   dictionary: Dictionary;
   locale: Locale;
   selectedCarSeries: number[];
@@ -165,28 +162,6 @@ export function FilterBar({
                 ))}
               </div>
             </div>
-
-            {availableCarSeries.length > 0 ? (
-              <div className="mt-5">
-                <p className="mb-2 text-xs font-semibold text-muted">{dictionary.explore.filters.series}</p>
-                <div className="flex flex-wrap items-stretch gap-1.5">
-                  <SeriesSwatch
-                    active={draftCarSeries.length === 0}
-                    ariaLabel={dictionary.explore.allSeries}
-                    label={dictionary.explore.allLines}
-                    onClick={() => setDraftCarSeries([])}
-                  />
-                  {availableCarSeries.map((item) => (
-                    <SeriesSwatch
-                      active={draftCarSeries.includes(item.series)}
-                      key={item.series}
-                      label={item.label}
-                      onClick={() => toggleCarSeries(item.series)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
 
             <div className="mt-5 grid grid-cols-[auto_1fr] gap-2">
               <Button disabled={isPending} onClick={clearFilters} type="button" variant="secondary">

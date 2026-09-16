@@ -1,3 +1,4 @@
+import { getStateFromProblems } from "@/lib/domain/heat";
 import { LINE_COLORS } from "@/lib/domain/lines";
 import { formatCarCode, type Report } from "@/lib/domain/reports";
 import type { Locale } from "@/lib/i18n/config";
@@ -26,7 +27,7 @@ export function RecentReportRow({
         {report.line}
       </span>
       <p className="min-w-0 truncate font-mono text-sm font-semibold">{report.car ? formatCarCode(report.car) : dictionary.explore.noCar}</p>
-      <HeatStateBadge dictionary={dictionary} state={report.state} />
+      <HeatStateBadge dictionary={dictionary} state={getStateFromProblems(report.problems)} />
       <time className="whitespace-nowrap font-mono text-xs text-muted">{formatReportDateTime(report.createdAt, locale)}</time>
     </div>
   );
