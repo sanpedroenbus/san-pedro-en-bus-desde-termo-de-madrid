@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildDashboardData, buildCarExplorerSelection } from "@/lib/domain/dashboard";
 import { getRangeWindow, type DashboardRange } from "@/lib/domain/ranges";
 import {
@@ -17,7 +17,6 @@ import {
   getRequestFingerprint,
   getUndoExpiresAt,
   hashUndoToken,
-  shouldRequirePersistentStore,
   verifyUndoToken,
   type RequestFingerprint,
 } from "./report-security";
@@ -71,33 +70,12 @@ function getMemoryReports() {
   return globalForReports.termoReports;
 }
 
-let supabaseServiceClient: SupabaseClient | null = null;
-
-export function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (shouldRequirePersistentStore() && !process.env.TERMO_ABUSE_SECRET) {
-    throw new Error("TERMO_ABUSE_SECRET is required in this environment.");
-  }
-
-  if (!url || !key) {
-    if (shouldRequirePersistentStore()) {
-      const missing = [
-        !url ? "NEXT_PUBLIC_SUPABASE_URL" : null,
-        !key ? "SUPABASE_SERVICE_ROLE_KEY" : null,
-      ].filter(Boolean);
-      throw new Error(`Supabase is required in this environment. Missing: ${missing.join(", ")}`);
-    }
-    return null;
-  }
-
-  if (!supabaseServiceClient) {
-    supabaseServiceClient = createClient(url, key, {
-      auth: { persistSession: false },
-    });
-  }
-  return supabaseServiceClient;
+export function getSupabase(): SupabaseClient | null {
+  // Supabase is disabled while we're exploring the product direction. Every
+  // caller already has a memory-store fallback for a null client; keep using
+  // that instead of a real database. Re-enable by restoring the client build
+  // below once a real Supabase project is ready.
+  return null;
 }
 
 export function getMemoryDashboard(options: {
