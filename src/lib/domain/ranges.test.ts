@@ -1,54 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { getRangeEnd, getRangeStart, getRangeWindow, getSummerEnd, isTimeRange } from "./ranges";
+import { getRangeEnd, getRangeStart, getRangeWindow, isTimeRange, TIME_RANGES } from "./ranges";
 
 describe("time ranges", () => {
+  it("defines exactly today, sevenDays, thirtyDays and all", () => {
+    expect(TIME_RANGES).toEqual(["today", "sevenDays", "thirtyDays", "all"]);
+  });
+
   it("validates range names", () => {
-    expect(isTimeRange("today")).toBe(true);
+    for (const range of TIME_RANGES) {
+      expect(isTimeRange(range)).toBe(true);
+    }
+    expect(isTimeRange("summer")).toBe(false);
     expect(isTimeRange("quarter")).toBe(false);
+    expect(isTimeRange(undefined)).toBe(false);
   });
 
-  it("computes today, seven day, and month starts", () => {
-    const now = new Date("2026-07-05T12:34:00Z");
-    expect(getRangeStart("today", now).toISOString()).toBe("2026-07-04T22:00:00.000Z");
-    expect(getRangeStart("sevenDays", now).toISOString()).toBe("2026-06-28T22:00:00.000Z");
-    expect(getRangeStart("month", now).toISOString()).toBe("2026-06-05T22:00:00.000Z");
+  it("computes today, seven day, and thirty day starts on local calendar days", () => {
+    const now = new Date("2026-07-05T12:00:00Z");
+    expect(getRangeStart("today", now).toISOString()).toBe("2026-07-05T06:00:00.000Z");
+    expect(getRangeStart("sevenDays", now).toISOString()).toBe("2026-06-29T06:00:00.000Z");
+    expect(getRangeStart("thirtyDays", now).toISOString()).toBe("2026-06-06T06:00:00.000Z");
   });
 
-  it("computes a rolling last 24 hour window", () => {
-    const now = new Date("2026-07-05T12:34:00Z");
-    const window = getRangeWindow("last24Hours", now);
+  it("uses Costa Rica calendar days across the UTC date boundary (UTC-6, no DST)", () => {
+    // 2026-07-05T05:59:59Z is still 2026-07-04 local time in Costa Rica.
+    const justBeforeLocalMidnight = new Date("2026-07-05T05:59:59.000Z");
+    expect(getRangeStart("today", justBeforeLocalMidnight).toISOString()).toBe("2026-07-04T06:00:00.000Z");
 
-    expect(window.start.toISOString()).toBe("2026-07-04T12:34:00.000Z");
-    expect(window.end.toISOString()).toBe("2026-07-05T12:34:00.000Z");
+    const justAfterLocalMidnight = new Date("2026-07-05T06:00:00.000Z");
+    expect(getRangeStart("today", justAfterLocalMidnight).toISOString()).toBe("2026-07-05T06:00:00.000Z");
   });
 
-  it("uses Madrid calendar days across UTC date boundaries", () => {
-    const now = new Date("2026-07-04T22:30:00Z");
-
-    expect(getRangeStart("today", now).toISOString()).toBe("2026-07-04T22:00:00.000Z");
+  it("bounds the 'all' range to a documented 730-day lookback rather than the epoch", () => {
+    const now = new Date("2026-07-05T12:00:00Z");
+    expect(getRangeStart("all", now).toISOString()).toBe("2024-07-05T06:00:00.000Z");
   });
 
-  it("uses current summer after May 15", () => {
-    const start = getRangeStart("summer", new Date("2026-07-05T12:00:00Z"));
-    expect(start.toISOString()).toBe("2026-05-14T22:00:00.000Z");
-    expect(getSummerEnd(new Date("2026-07-05T12:00:00Z")).toISOString()).toBe("2026-10-15T21:59:59.999Z");
+  it("ends every range at the provided instant, not the end of a calendar day", () => {
+    const now = new Date("2026-07-05T12:34:56.000Z");
+    expect(getRangeEnd(now).toISOString()).toBe(now.toISOString());
   });
 
-  it("uses previous summer before May 15", () => {
-    expect(getRangeStart("summer", new Date("2027-02-01T12:00:00Z")).toISOString()).toBe("2026-05-14T22:00:00.000Z");
-  });
-
-  it("caps summer at October 15 after the season ends", () => {
-    const now = new Date("2026-11-02T12:00:00Z");
-    const end = getRangeEnd("summer", now);
-
-    expect(end.toISOString()).toBe("2026-10-15T21:59:59.999Z");
-  });
-
-  it("returns bounded windows for summer", () => {
-    const window = getRangeWindow("summer", new Date("2026-11-02T12:00:00Z"));
-
-    expect(window.start.toISOString()).toBe("2026-05-14T22:00:00.000Z");
-    expect(window.end.toISOString()).toBe("2026-10-15T21:59:59.999Z");
+  it("returns a start/end pair from getRangeWindow", () => {
+    const now = new Date("2026-07-05T12:00:00Z");
+    const window = getRangeWindow("sevenDays", now);
+    expect(window.start.toISOString()).toBe("2026-06-29T06:00:00.000Z");
+    expect(window.end.toISOString()).toBe(now.toISOString());
   });
 });

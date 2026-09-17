@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/:asset(icon.svg|landing-train.svg|favicon-48x48.png|icon-192x192.png|icon-512x512.png|apple-touch-icon.png)",
+        source: "/:asset(icon.svg|landing-bus.svg|favicon-48x48.png|icon-192x192.png|icon-512x512.png|apple-touch-icon.png)",
         headers: [
           {
             key: "Cache-Control",

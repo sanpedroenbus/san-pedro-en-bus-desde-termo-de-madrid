@@ -17,22 +17,25 @@
   --accent-contrast: oklch(0.19 0.018 160);
   --report-button: oklch(0.72 0.165 72);
   --report-particle: oklch(0.99 0.055 92);
-  --report-particle-fresco: oklch(0.96 0.045 235);
-  --report-particle-calor: oklch(0.99 0.055 92);
-  --report-particle-infierno: oklch(0.98 0.05 42);
   --report-active-blur: oklch(0.78 0.16 74 / 0.48);
   --primary: oklch(0.52 0.125 160);
   --primary-contrast: oklch(0.99 0 0);
-  --metro-red: oklch(0.56 0.21 28);
-  --metro-blue: oklch(0.53 0.18 250);
+  --explore-accent: oklch(0.53 0.18 250);
+  /* Legacy heat-state tokens: still consumed by out-of-scope component code
+     (action-icons.tsx, app-header.tsx, home/reportar pages) via the
+     --color-heat-* Tailwind exposure below. Kept working as-is pending the
+     Problem Selector rebuild; do not repurpose these names for anything new. */
   --heat-fresco: oklch(0.68 0.145 235);
   --heat-fresco-soft: oklch(0.955 0.03 235);
   --heat-calor: oklch(0.72 0.165 72);
   --heat-calor-soft: oklch(0.965 0.04 72);
   --heat-infierno: oklch(0.59 0.21 32);
   --heat-infierno-soft: oklch(0.955 0.04 32);
-  --heat-soft-foreground: oklch(0.19 0.018 160);
-  --heat-helper-foreground: color-mix(in oklch, var(--heat-soft-foreground), var(--muted) 38%);
+  --category-fiabilidad: oklch(0.55 0.18 255);
+  --category-paradas: oklch(0.62 0.14 180);
+  --category-seguridad: oklch(0.55 0.2 15);
+  --category-condicion: oklch(0.68 0.15 85);
+  --category-convivencia: oklch(0.55 0.17 320);
   --success: oklch(0.555 0.13 150);
   --warning: oklch(0.71 0.16 76);
   --danger: oklch(0.565 0.21 30);
@@ -77,8 +80,6 @@
   --report-button: oklch(0.68 0.16 72);
   --report-particle: oklch(0.98 0.04 92);
   --report-active-blur: oklch(0.78 0.16 74 / 0.42);
-  --heat-soft-foreground: oklch(0.145 0.036 252);
-  --heat-helper-foreground: color-mix(in oklch, var(--heat-soft-foreground), var(--muted) 18%);
 }
 
 @theme inline {
@@ -96,6 +97,11 @@
   --color-heat-calor-soft: var(--heat-calor-soft);
   --color-heat-infierno: var(--heat-infierno);
   --color-heat-infierno-soft: var(--heat-infierno-soft);
+  --color-category-fiabilidad: var(--category-fiabilidad);
+  --color-category-paradas: var(--category-paradas);
+  --color-category-seguridad: var(--category-seguridad);
+  --color-category-condicion: var(--category-condicion);
+  --color-category-convivencia: var(--category-convivencia);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -243,15 +249,15 @@ body {
 }
 
 .home-explore-action {
-  border-color: color-mix(in oklch, var(--border), var(--metro-blue) 48%);
+  border-color: color-mix(in oklch, var(--border), var(--explore-accent) 48%);
   background:
-    linear-gradient(135deg, color-mix(in oklch, var(--surface-raised), var(--metro-blue) 14%), var(--surface-raised));
+    linear-gradient(135deg, color-mix(in oklch, var(--surface-raised), var(--explore-accent) 14%), var(--surface-raised));
 }
 
 .home-train-silhouette {
   display: block;
   background: currentColor;
-  mask: url("/landing-train.svg") center / contain no-repeat;
+  mask: url("/landing-bus.svg") center / contain no-repeat;
 }
 
 .home-report-action > *,

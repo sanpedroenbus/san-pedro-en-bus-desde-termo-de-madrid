@@ -1,6 +1,6 @@
 ---
-name: "Termo de Madrid"
-description: "A mobile-first civic heat-reporting PWA for Metro de Madrid AC conditions."
+name: "San Pedro en Bus"
+description: "A mobile-first civic PWA for reporting and exploring bus service problems in San Pedro, Costa Rica."
 colors:
   bg: "oklch(0.985 0.012 92)"
   bg-dark: "oklch(0.145 0.036 252)"
@@ -16,15 +16,6 @@ colors:
   border-dark: "oklch(0.360 0.040 248)"
   primary: "oklch(0.520 0.125 160)"
   primary-contrast: "oklch(0.990 0.000 0)"
-  metro-red: "oklch(0.560 0.210 28)"
-  metro-blue: "oklch(0.530 0.180 250)"
-  heat-fresco: "oklch(0.680 0.145 235)"
-  heat-fresco-soft: "oklch(0.955 0.030 235)"
-  heat-calor: "oklch(0.720 0.165 72)"
-  heat-calor-soft: "oklch(0.965 0.040 72)"
-  heat-infierno: "oklch(0.590 0.210 32)"
-  heat-infierno-soft: "oklch(0.955 0.040 32)"
-  heat-soft-foreground: "oklch(0.190 0.018 160)"
   success: "oklch(0.555 0.130 150)"
   warning: "oklch(0.710 0.160 76)"
   danger: "oklch(0.565 0.210 30)"
@@ -84,11 +75,6 @@ components:
     textColor: "{colors.primary-contrast}"
     rounded: "{rounded.md}"
     padding: "12px 16px"
-  button-heat:
-    backgroundColor: "{colors.heat-infierno}"
-    textColor: "{colors.primary-contrast}"
-    rounded: "{rounded.md}"
-    padding: "12px 16px"
   button-secondary:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.ink}"
@@ -106,80 +92,101 @@ components:
     padding: "12px"
 ---
 
-# Design System: Termo de Madrid
+# Design System: San Pedro en Bus
 
 <!-- SEED -->
+
+> **Pending rename.** This document describes the target design language. The live CSS
+> (`src/app/globals.css`) and `src/lib/design/tokens.ts` still carry Termo de Madrid-era variable
+> names — `--metro-red`, `--metro-blue`, `--heat-fresco/calor/infierno`, `SOCIAL_IMAGE_TOKENS`'
+> Metro-branded fields — that this document's colour semantics have already moved past. That rename
+> is tracked as `makeover.md` P5 (Phase 7, brand and design tokens). Until it lands, treat the
+> variable *names* in code as stale but their current hue values as still-valid neutral/primary
+> tokens unless this document says otherwise.
 
 ## 1. Overview
 
 **Creative North Star: "Flighty Status, Raycast Action"**
 
-Termo de Madrid should feel like a sharp public evidence tool built for a hot train platform: fast to read, easy to share, and calm enough to trust while still carrying a dry satirical edge. The product should combine Flighty-like mobile status intelligence with Raycast-like action clarity: a confident current-state surface first, then two obvious actions.
+San Pedro en Bus should feel like a sharp public evidence tool built for someone standing on a bus with one hand free: fast to read, easy to share, and calm enough to trust. The product combines Flighty-like mobile status intelligence with Raycast-like action clarity: a confident current-state surface first, then two obvious actions.
 
-The default interface is light because people will use and screenshot it on phones in stations, trains, and outdoor transitions. Dark mode is supported from v1, but it should be a true theme switch, not the main visual identity. Heat is expressed through state, charts, and micro-motion, not through a permanently hot background. A restrained page glow is part of the current app shell, but it must stay quiet and must not become heat wallpaper.
+The default interface is light because people will use and screenshot it on phones outdoors and inside buses. Dark mode is supported from v1, but it should be a true theme switch, not the main visual identity. A restrained page glow is part of the current app shell, but it must stay quiet and never become decorative wallpaper.
 
-The system rejects official Metro de Madrid mimicry, generic complaint-counter dashboards, cartoon flames, glassmorphism, oversized rounded cards, and single average metrics that make L1 and L5 disappear into a network-wide score. The dashboard can open with an evolution/status chart when that helps orientation, as long as line-level severity remains prominent.
+The system rejects official-transit-company mimicry, generic complaint-counter dashboards, glassmorphism, oversized rounded cards, and single average metrics that let a bad route disappear into a network-wide score. The dashboard leads with route-level report volume, never a single indicator.
 
 **Key Characteristics:**
 
 - Flighty-style live status surface with Raycast-style primary actions: Reportar and Explorar.
 - Restrained light surfaces, crisp borders, 8px cards, and compact data density.
-- Heat colors encode condition; Metro line colors identify lines.
+- Route colors identify routes; problem-category colors identify what kind of problem was reported. Neither is reused for the other's job.
 - Dashboard modules are self-contained, screenshot-friendly evidence blocks.
-- Satirical copy appears in helper text, summaries, empty states, and share cards, not in core controls.
+- Copy is direct and personal (see `PRODUCT.md`'s Brand Personality), not satirical.
 
 ### Reference Pass
 
 - **Observable Plot** (`https://observablehq.com/plot/`): Primary chart inspiration. Adopt the grammar mindset: compose bars, lines, dots, scales, small multiples, and transforms deliberately. Even though v1 uses Recharts, chart components should be designed as reusable visual grammar, not one-off pictures.
 - **Linear** (`https://linear.app/`): Adopt the precision: dense but calm layouts, compact labels, clear hierarchy, subtle separators, and highly consistent component vocabulary. Avoid copying its dark SaaS mood or product-management structure.
-- **Raycast** (`https://www.raycast.com/`): Core action reference. Adopt centered action clarity and command-palette discipline: one obvious next action, compact rows, fast feedback, and utility controls that do not compete with the primary task. Avoid making Termo feel like a desktop launcher.
-- **Flighty** (`https://www.flighty.com/`): Core mobile-status reference. Adopt one strong current-state panel, crisp travel/status details, restrained delight, and share/export affordances that feel native. Avoid heavy 3D or map hero treatments for v1.
-- **Citymapper** (`https://citymapper.com/`): Adopt small transport-specific humor and useful weirdness: tiny route/status jokes, obvious mode chips, and local transit personality. Avoid the busy map/search surface; Termo is not a route planner.
+- **Raycast** (`https://www.raycast.com/`): Core action reference. Adopt centered action clarity and command-palette discipline: one obvious next action, compact rows, fast feedback, and utility controls that do not compete with the primary task.
+- **Flighty** (`https://www.flighty.com/`): Core mobile-status reference. Adopt one strong current-state panel, crisp status details, restrained delight, and share/export affordances that feel native.
+- **Citymapper** (`https://citymapper.com/`): Adopt small transport-specific personality: obvious route chips, local transit character. Avoid the busy map/search surface; this is not a route planner.
 - **Datawrapper** (`https://www.datawrapper.de/`): Adopt chart discipline: mobile exports, non-overlapping labels, accessible colors, brand consistency, and responsive preview thinking. Every dashboard module should be checked as a shareable mobile artifact.
 - **FixMyStreet** (`https://www.fixmystreet.com/`): Functional reference only, not a visual reference. Keep the civic directness and recent-activity proof, but do not inherit its visual style or location-heavy flow.
 
 ## 2. Colors
 
-The palette is creamy civic utility with a quiet green primary, Metro red/blue references for the independent mark, a blue-black dark theme, and a three-state heat scale for data.
+The palette is creamy civic utility with a quiet green primary, a blue-black dark theme, distinct route-identity colors, and a five-category problem palette.
 
 ### Primary
 
-- **Civic Green** (`oklch(0.520 0.125 160)`): Primary actions, selected neutral controls, focus affordances, and links when heat status is not the meaning. It keeps the app independent from Metro's red/blue identity.
-- **Independent Metro Red** (`oklch(0.560 0.210 28)`): Logo diamond/alert plate and occasional critical civic emphasis. Do not use it as the default error color when `Infierno` already carries heat semantics.
-- **Utility Blue** (`oklch(0.530 0.180 250)`): Logo thermometer stem, secondary civic accent, and cool technical details.
+- **Civic Green** (`oklch(0.520 0.125 160)`): Primary actions, selected neutral controls, focus affordances, and links when route or problem-category meaning is not in play.
 
-### Secondary
+### Route identity
 
-- **Fresco Blue** (`oklch(0.680 0.145 235)`): Comfortable AC state. Use for selected `Fresco`, chart segments, and subtle cool summaries. The soft fill is `oklch(0.955 0.030 235)`.
-- **Calor Amber** (`oklch(0.720 0.165 72)`): Default report state and uncomfortable condition. Use for selected `Calor`, warnings, chart segments, and default heat summaries. The soft fill is `oklch(0.965 0.040 72)`.
-- **Infierno Red** (`oklch(0.590 0.210 32)`): Intolerable/broken AC state. Use for selected `Infierno`, critical chart segments, and heat shimmer accents after selection. The soft fill is `oklch(0.955 0.040 32)`.
-- **Heat Soft Foreground** (`oklch(0.190 0.018 160)` light, dark theme equivalent of the page background): Text and icons on selected soft heat fills, so dark mode never places pale text on pale heat backgrounds.
+Nine routes, each a genuinely distinct hue spaced roughly 40° apart around the wheel, tuned so lightness and `textOnFill` stay legible against each fill in both themes. Defined in `src/lib/domain/routes.ts` as `ROUTE_COLORS`, not duplicated in CSS — components should import from there, not hardcode hex/oklch values.
+
+| Route | Fill |
+|---|---|
+| La Campiña | `oklch(0.52 0.17 250)` |
+| Granadilla | `oklch(0.55 0.20 10)` |
+| San Ramón | `oklch(0.55 0.15 145)` |
+| Sabanilla | `oklch(0.75 0.15 95)` |
+| Salitrillos | `oklch(0.50 0.18 300)` |
+| Vargas Araya | `oklch(0.55 0.12 190)` |
+| Barrio Pinto | `oklch(0.70 0.16 60)` |
+| Cedros | `oklch(0.58 0.19 340)` |
+| La Europa | `oklch(0.50 0.15 220)` |
+
+Two routes (La Europa at 220° and La Campiña at 250°) sit only 30° apart in the blue range — check they read distinctly in a chart legend before calling this final (`makeover.md` P6).
+
+### Problem categories
+
+Five categories, used only for the reports-per-category dashboard module — never for the problem-selector UI in the report form, which keeps all 16 problems equal-weight (see Named Rules). Currently drawn from the existing `SERIES_CHART_COLORS` palette in `src/lib/design/tokens.ts` (originally built for a since-removed car-series chart, now repurposed). A dedicated `CATEGORY_COLORS` token keyed by `fiabilidad` / `paradas` / `seguridad` / `condicion` / `convivencia` should replace that repurposing once Phase 7 lands, so the naming stops implying an unrelated concept.
 
 ### Neutral
 
-- **Civic Cream** (`oklch(0.985 0.012 92)`): Default light background. Keep it close to neutral and let heat remain data/action color, not wallpaper.
+- **Civic Cream** (`oklch(0.985 0.012 92)`): Default light background. Keep it close to neutral.
 - **Quiet Panel** (`oklch(0.957 0.011 96)`): App shell panels, dashboard bands, table headers, and quiet section backgrounds.
 - **Raised Surface** (`oklch(0.997 0.006 96)`): Cards, share modules, form groups, and popovers.
 - **Ink Green-Black** (`oklch(0.190 0.018 160)`): Primary text on light surfaces.
 - **Muted Green-Gray** (`oklch(0.450 0.014 160)`): Secondary text that must remain readable; never use pale placeholder gray.
 - **Border Mist** (`oklch(0.860 0.014 96)`): Dividers, input borders, chip outlines, and chart grid lines.
-- **Tech Blue Black** (`oklch(0.145 0.036 252)`): Dark theme background, with blue-black panels and no white radial wash.
+- **Tech Blue Black** (`oklch(0.145 0.036 252)`): Dark theme background, blue-black panels, no white radial wash.
 
 ### Named Rules
 
-**The Meaning Separation Rule.** Metro line colors identify lines; heat colors communicate AC condition. Do not make one color do both jobs in the same chart mark.
+**The Meaning Separation Rule.** Route colors identify routes; problem-category colors identify categories. Do not make one color do both jobs in the same chart mark, and do not use either to imply severity or ranking.
 
-**The Selected Fill Rule.** Unselected line chips stay neutral with a colored dot or short mark. Selected line chips may use the line color as a fill with contrast-correct white or black text plus a check icon or outline.
+**The Selected Fill Rule.** Unselected chips stay neutral with a colored dot or short mark. Selected chips may use the identity color as a fill with contrast-correct white or black text plus a check icon or outline.
 
-**The No Heat Wallpaper Rule.** Heat belongs in data, selected states, and primary report action motion, not in the global page background. The global app glow is allowed only as a subtle neutral shell treatment.
+**The No Bait Rule.** In the problem selector, all 16 problems stay equal visual weight until selected. Grouping by category is for scannability only — never color-code or rank problems by severity within the form.
 
-**Metro Line Color Working Set.** Use a token map for L1-L12, based on official-ish line identity colors and verified before launch against the current Metro map/source. Suggested implementation tokens: L1 light blue, L2 red, L3 yellow, L4 brown, L5 green, L6 gray, L7 orange, L8 pink, L9 purple, L10 dark blue, L11 teal green, L12 olive. Each line token must define `fill`, `textOnFill`, and `ring`.
+**The No Decorative Wallpaper Rule.** Color belongs in data, selected states, and primary action motion, not in the global page background. The global app glow is allowed only as a subtle neutral shell treatment.
 
 ## 3. Typography
 
-**Display Font:** Geist, with Inter and system sans fallbacks  
-**Body Font:** Geist, with Inter and system sans fallbacks  
-**Label/Mono Font:** Geist Mono for timestamps, car codes, report IDs, and compact data
+**Display Font:** Geist, with Inter and system sans fallbacks
+**Body Font:** Geist, with Inter and system sans fallbacks
+**Label/Mono Font:** Geist Mono for timestamps, unit identifiers, report IDs, and compact data
 
 **Character:** One product sans keeps the interface credible and fast. Distinction comes from weight, tabular numbers, spacing, and data composition rather than a second display font.
 
@@ -188,19 +195,19 @@ The palette is creamy civic utility with a quiet green primary, Metro red/blue r
 - **Display** (680, 2.25rem, 1.04): Home title and major share-card titles only. Keep letter spacing at `-0.025em`; never tighter than `-0.04em`.
 - **Headline** (650, 1.5rem, 1.12): Dashboard module headings, route titles, and major empty states.
 - **Title** (620, 1rem, 1.25): Card titles, form group labels, chart captions, and table headings.
-- **Body** (400, 0.9375rem, 1.5): Descriptions, methodology, state helper text, and summaries. Cap prose around 65-75ch.
+- **Body** (400, 0.9375rem, 1.5): Descriptions, methodology, and summaries. Cap prose around 65-75ch.
 - **Label** (580, 0.8125rem, 1.2): Buttons, chips, control labels, confidence labels, and compact legends. Do not use all-caps tracking as a default style.
-- **Data** (560, 0.875rem, 1.25): Car identifiers, timestamps, numeric scores, ranges, and table values. Use tabular numbers.
+- **Data** (560, 0.875rem, 1.25): Unit identifiers, timestamps, numeric counts, ranges, and table values. Use tabular numbers.
 
 ### Named Rules
 
-**The Data First Rule.** Numbers, line codes, car codes, and confidence labels must align cleanly and use tabular settings. If a chart label wraps badly on mobile, shorten the label before shrinking the type below readable size.
+**The Data First Rule.** Numbers, route names, unit identifiers, and confidence labels must align cleanly and use tabular settings. If a chart label wraps badly on mobile, wrap or shorten the label before shrinking the type below readable size — see the 16-problem chart's wrapped-tick approach in `dashboard-charts.tsx`.
 
 **The No Display Labels Rule.** Buttons, nav items, chips, form controls, and chart labels always use the UI scale, never display typography.
 
 ## 4. Elevation
 
-The system is flat by default. Depth comes from tonal layering, borders, spacing, and state changes rather than decorative drop shadows. Shadows are reserved for floating elements that must detach from the page, such as popovers, tooltips, toasts, autocomplete menus, and share/export previews.
+The system is flat by default. Depth comes from tonal layering, borders, spacing, and state changes rather than decorative drop shadows. Shadows are reserved for floating elements that must detach from the page: popovers, tooltips, toasts, autocomplete menus, and share/export previews.
 
 ### Shadow Vocabulary
 
@@ -220,17 +227,14 @@ The system is flat by default. Depth comes from tonal layering, borders, spacing
 
 - **Shape:** Compact rectangle with 8px radius. Full pill only for tiny status badges or segmented controls.
 - **Primary:** Civic Green fill, white text, 12px x 16px padding, medium weight label.
-- **Heat Submit:** Submit button inherits selected state meaning: Fresco Blue, Calor Amber, or Infierno Red. Use white text on saturated fills except for pale variants.
-- **Hover / Focus:** 150-200ms color/outline transition. Focus ring is 2px outside using Civic Green or the active heat color plus a neutral offset.
+- **Hover / Focus:** 150-200ms color/outline transition. Focus ring is 2px outside using Civic Green, plus a neutral offset.
 - **Secondary / Ghost:** Neutral surface with ink text and a visible border. Ghost buttons are for low-risk utility actions only.
 - **Disabled / Loading:** Preserve dimensions. Loading uses inline progress text or skeleton affordance, not a centered spinner that shifts layout.
 
 ### Chips
 
-- **Line Chips:** Fixed-size compact buttons. Unselected chips use neutral background, line-colored dot/short bar, ink label, and border. Selected chips use line-color fill, contrast-correct text, check icon, and strong outline.
-- **Series Chips:** Compact fixed-height data chips for car-series filters. Use mono tabular labels, neutral unselected state, and the civic accent selected state. Do not use Metro line colors or heat colors for series selection.
-- **Range Chips:** Neutral segmented controls for `Hoy`, `7 dias`, `1 mes`, `Este verano`. Selected state uses Civic Green or neutral dark fill, not heat color.
-- **Status Chips:** Fresco/Calor/Infierno colors only when status is the data meaning.
+- **Route Chips:** Fixed-size compact buttons, 9 across a 2-column grid on mobile. Unselected chips use neutral background, route-colored dot/short bar, ink label, and border. Selected chips use route-color fill, contrast-correct text, check icon, and strong outline.
+- **Range Chips:** Neutral segmented controls for `Hoy`, `7 días`, `30 días`, `Todo`. Selected state uses Civic Green or neutral dark fill, not a route or category color.
 
 ### Cards / Containers
 
@@ -239,51 +243,43 @@ The system is flat by default. Depth comes from tonal layering, borders, spacing
 - **Shadow Strategy:** Flat at rest. Use border or tonal contrast. Floating overlays may use Popover Shadow.
 - **Border:** 1px solid Border Mist. No colored side stripes thicker than 1px.
 - **Internal Padding:** 16px on mobile modules, 20-24px for desktop panels and share-card exports.
-- **Share Modules:** Every exportable dashboard module needs title, active range, visible legend, chart/table body, key takeaway, and Termo attribution inside the module bounds.
 
 ### Inputs / Fields
 
 - **Style:** Neutral background, 1px border, 8px radius, 12px padding, full-width on mobile.
-- **Focus:** Border shifts to Civic Green or active heat color with a 2px outline. No glow unless it is the selected heat state panel.
+- **Focus:** Border shifts to Civic Green with a 2px outline.
 - **Placeholder:** Must pass contrast; use Muted Green-Gray, not default browser gray.
 - **Error / Disabled:** Error uses Danger with text explanation. Disabled state reduces contrast only within WCAG limits and never hides labels.
-- **Coche Autocomplete:** Optional field with helper tooltip. Do not mark it as optional in the visible label. Suggestions filter by selected line and rank by recent reports. Accept loose Metro-style values, but reject the retired 1000 series; do not infer broader fleet restrictions until they are confirmed. Submitting without a car opens an accessible confirmation dialog whose primary action returns focus to this field; the secondary action confirms submission without a car.
+- **Unit Field:** Optional field with helper tooltip; do not mark it as optional in the visible label. Accepts either a bus unit number or a licence plate — 1-10 alphanumeric characters, normalized uppercase. Suggestions filter by selected route. Submitting without a unit opens an accessible confirmation dialog whose primary action returns focus to this field; the secondary action confirms submission without a unit.
 
 ### Navigation
 
-- **Home:** Compact civic landing with title, mission sentence, live snapshot, two large action buttons, language switch, theme switch, and mandatory disclaimer.
-- **App Header:** Small logo mark, current route title, language/theme utilities, and clear back/home affordance on `/reportar`.
-- **Raycast-Style Nav:** Use a compact floating or inset top utility bar with crisp active states, icon+label actions where useful, and fast state transitions. It should feel light, precise, and app-like, not like a marketing navbar.
-- **Compact Drawer Navigation:** V1 uses a compact top drawer so language, theme, methodology, and core routes stay reachable without crowding the mobile header. Keep the primary home actions visible; the drawer must stay lightweight and keyboard-accessible.
-- **Dashboard Filters:** Sticky or near-sticky line, car-series, and range controls on mobile. The active filter summary should include selected lines, selected series when present, and the active range. Filters should never cover chart content. Filter and shortcut popovers must be scroll-contained, lock page scroll while open, keep an accessible dialog title, and retain a visible close button.
+- **Home:** Compact civic landing with title, mission sentence, live snapshot, two large action buttons, theme switch, and mandatory disclaimer. No language switch in v1 — the app is Spanish-only (see `PRODUCT.md`).
+- **App Header:** Small logo mark, current route title, theme utility, and clear back/home affordance on `/reportar`.
+- **Raycast-Style Nav:** A compact floating or inset top utility bar with crisp active states, icon+label actions where useful, and fast state transitions.
+- **Dashboard Filters:** Sticky or near-sticky route and range controls on mobile. The active filter summary should include selected routes and the active range. Filters should never cover chart content. Filter popovers must be scroll-contained, lock page scroll while open, keep an accessible dialog title, and retain a visible close button.
 
-### Heat State Selector
+### Problem Selector
 
-Three equal-size options: Fresco, Calor, Infierno. Calor is selected by default, but all options have equal visual weight until selected. The explanatory panel below changes color, copy, submit label, and subtle motion based on state. Infierno may become visually intense only after the user selects it.
+Sixteen problems grouped into five categories (`fiabilidad`, `paradas`, `seguridad`, `condicion`, `convivencia`) as nested `<fieldset>`/`<legend>` sections under one outer "¿Qué pasó?" fieldset. Multi-select — a single trip commonly has more than one problem. Every option is an equal-weight toggle button regardless of category or position; grouping exists purely to make 16 options scannable on a phone, never to imply one problem matters more than another (see the No Bait Rule in §2).
 
 ### Dashboard Modules
 
-Dashboard modules are evidence blocks, not generic metric cards. The default order leads with line evolution/status, then total report volume over time, line/car coverage charts, worst-car evidence, car exploration, the Termo indicator, hourly distribution, fleet coverage, and line detail. Never lead with or overemphasize a single network average. Modules should include compact helper tooltips for `Indicador Termo`, confidence, fleet estimates, and summer range definitions.
+Dashboard modules are evidence blocks, not generic metric cards. The fixed module order:
 
-Current module styles:
+1. **Reports per route** — the lead module, horizontal bars in route-identity color, all 9 routes shown, never truncated. Never replaced or preceded by a single network-wide number.
+2. **Reports per problem** — horizontal bars across all 16 problems, single accent fill (not route or category color), value labels rather than relying on hover (mobile has no hover).
+3. **Reports per category** — the 5-category rollup, a more scannable summary of #2, using the problem-category palette from §2.
+4. **Report volume over time** — line chart for the selected range, with a computed tick interval so long ranges (`Todo`, hundreds of daily buckets) don't produce overlapping date labels.
+5. **Most-reported units** — ranked list, clicking a row opens the unit explorer below.
+6. **Unit explorer** — search or select a reported unit; show total reports, routes it runs, and a history chart for the active range.
+7. **Route detail cards** — per-route reports, units reported, latest report, and a confidence badge. (Per-route problem breakdown inside these cards is planned but not yet wired — `makeover.md` P12.)
 
-- Line evolution: time-series by line identity color and compact range labels.
-- Total reports: line chart by day for the active range. Count Fresco, Calor, Infierno, all lines, and reports with or without car identifiers.
-- Report volume: bars by line identity color.
-- Cars by line: bars for distinct reported cars.
-- Cars by series: bars grouped by the thousand series parsed from car identifiers, sorted smallest to largest, using a reusable varied chart color palette that does not imply heat state or Metro line identity.
-- Worst cars: dense clickable rows with car code, line badges, report count, confidence, and heat-state counts. Show 4 rows by default, expandable to 15 with a chevron action.
-- Explore car: compact search input for cars with reports in the active range, local skeleton transition on car changes, total reports, reported line badges, and a day/hour history chart.
-- Termo indicator trend: time-series by line identity color with methodology help.
-- Distribution by hour: bars from 5 through 23, labeled with plain hour numbers. Each bar counts reports from that hour's `:00` through `:59`.
-- Fleet coverage: estimated/known caveat visible, with tooltip explanation. A car counts only when Calor plus Infierno reports minus Fresco reports is greater than 2 in the active range. Show the 5 worst lines by default, expandable to all lines.
-- Line detail cards: compact cards at the end of Explore with confidence, disagreement, latest report, and score. Clicking a card opens a modal titled `Coches reportados`.
-- Line detail modal: scroll-contained overlay with page scroll locked, visible close button, total distinct reported cars for the active line/range, and clickable car rows matching worst-car row style. Rows show total reports and only non-zero Fresco/Calor/Infierno counters, then link to the car explorer for that car.
-- Recent reports: not part of the Explore dashboard module stack. Recent report rows may still be used outside Explore, such as Home snapshots.
+There is no Termo Indicator, fleet-coverage percentage, or any other weighted score. Modules should include compact helper tooltips for confidence and range definitions where useful, per the Do's/Don'ts below.
 
 ### Logo / App Icon
 
-Use a flat red tilted lozenge/diamond behind a blue vertical thermometer. The mark may be Metro-adjacent but must not copy Metro de Madrid's exact logo proportions, wordmark behavior, or brand typography. No logo motion.
+The current mark (a red diamond behind a blue thermometer, inherited from Termo de Madrid) is a placeholder pending a San Pedro en Bus-specific identity (`makeover.md` P5). No logo motion.
 
 ## 6. Do's and Don'ts
 
@@ -292,20 +288,20 @@ Use a flat red tilted lozenge/diamond behind a blue vertical thermometer. The ma
 - **Do** use a mostly light creamy interface with dark mode support from v1.
 - **Do** use 8px cards, 8px controls, and 12px only for larger app panels or share cards.
 - **Do** keep the dashboard vertical on mobile; no chart carousel for v1.
-- **Do** make every major dashboard module screenshot-friendly with title, range, legend, data, takeaway, and attribution.
+- **Do** make every major dashboard module screenshot-friendly with title, range, legend, data, and takeaway.
 - **Do** use tooltips/help popovers for methodology details instead of bloating the main UI with explanatory text.
 - **Do** show confidence as simple labels (`baja`, `media`, `alta`) with tap/hover explanation.
-- **Do** distinguish line identity colors from heat-state colors.
-- **Do** use subtle heat shimmer or ember-like motion only around selected heat state or critical dashboard feedback, with reduced-motion alternatives.
-- **Do** include the mandatory disclaimer: `Proyecto ciudadano no afiliado a Metro de Madrid`
-- **Do** keep Spanish and English copy complete in v1, with all UI strings in dictionaries.
+- **Do** distinguish route-identity colors from problem-category colors.
+- **Do** include the mandatory disclaimer: `Proyecto ciudadano, no afiliado a ninguna empresa de transporte`
+- **Do** keep Spanish copy complete and centralized in the locale dictionary, even with one locale live.
 
 ### Don't:
 
-- **Don't** make the app look affiliated with Metro de Madrid. Do not use official logos, wordmarks, typography mimicry, or exact brand layouts.
+- **Don't** make the app look affiliated with any transit company. Never name the company in-product.
 - **Don't** build a generic complaint counter that treats raw complaint volume as truth.
-- **Don't** lead with a single network average that hides severe lines.
-- **Don't** use heavy cartoon fire visuals, full-screen flame backgrounds, novelty heat effects, or decorative flame illustrations.
+- **Don't** lead with a single network average that hides a bad route.
+- **Don't** reintroduce a weighted scoring index, time decay, or fleet-coverage percentage.
+- **Don't** rank or color-code the 16 problems by severity in the report form.
 - **Don't** use glassmorphism as a default surface treatment.
 - **Don't** use border radii above 16px on cards, panels, or inputs.
 - **Don't** combine a 1px card border with soft shadows above 8px blur.
@@ -314,4 +310,4 @@ Use a flat red tilted lozenge/diamond behind a blue vertical thermometer. The ma
 - **Don't** expose open free-text comments in v1.
 - **Don't** request GPS/location permission in v1.
 - **Don't** support offline submission in v1.
-- **Don't** hide line/car/fleet caveats when the metric is estimated or based on partial data.
+- **Don't** hide confidence caveats when a metric is based on a small sample.

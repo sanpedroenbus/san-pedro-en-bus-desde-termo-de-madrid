@@ -1,4 +1,4 @@
-export const APP_TIME_ZONE = "Europe/Madrid";
+export const APP_TIME_ZONE = "America/Costa_Rica";
 
 type ZonedDateParts = {
   year: number;
@@ -38,7 +38,11 @@ function getTimeZoneOffsetMs(date: Date) {
   return localAsUtc - date.getTime();
 }
 
-export function fromMadridTime(
+// Costa Rica does not observe daylight saving time, so its UTC offset never
+// changes. A single pass is enough to turn a local wall-clock time into an
+// instant (Termo de Madrid's Europe/Madrid version needed a second corrective
+// pass to handle DST transitions near the boundary).
+export function fromLocalTime(
   year: number,
   monthIndex: number,
   day: number,
@@ -48,17 +52,15 @@ export function fromMadridTime(
   millisecond = 0,
 ) {
   const localAsUtc = Date.UTC(year, monthIndex, day, hour, minute, second, millisecond);
-  let instant = new Date(localAsUtc - getTimeZoneOffsetMs(new Date(localAsUtc)));
-  instant = new Date(localAsUtc - getTimeZoneOffsetMs(instant));
-  return instant;
+  return new Date(localAsUtc - getTimeZoneOffsetMs(new Date(localAsUtc)));
 }
 
-export function getMadridDateParts(date: Date) {
+export function getLocalDateParts(date: Date) {
   const { year, month, day } = getZonedDateParts(date);
   return { year, month, day };
 }
 
-export function getMadridStartOfDay(date: Date, dayOffset = 0) {
-  const { year, month, day } = getMadridDateParts(date);
-  return fromMadridTime(year, month - 1, day + dayOffset);
+export function getLocalStartOfDay(date: Date, dayOffset = 0) {
+  const { year, month, day } = getLocalDateParts(date);
+  return fromLocalTime(year, month - 1, day + dayOffset);
 }

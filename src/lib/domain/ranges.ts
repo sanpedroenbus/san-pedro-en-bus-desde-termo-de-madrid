@@ -1,51 +1,38 @@
-import { fromMadridTime, getMadridDateParts, getMadridStartOfDay } from "./time";
+import { getLocalStartOfDay } from "./time";
 
-export const TIME_RANGES = ["today", "sevenDays", "month", "summer"] as const;
+export const TIME_RANGES = ["today", "sevenDays", "thirtyDays", "all"] as const;
 
 export type TimeRange = (typeof TIME_RANGES)[number];
-export type DashboardRange = TimeRange | "last24Hours";
+
+// "all" has no natural start date. Bound it to a fixed lookback so bucketing
+// in dashboard.ts stays finite and cheap instead of walking back to the
+// epoch. Revisit once the app has a real multi-year history worth showing.
+const ALL_RANGE_LOOKBACK_DAYS = 730;
 
 export function isTimeRange(value: unknown): value is TimeRange {
   return typeof value === "string" && TIME_RANGES.includes(value as TimeRange);
 }
 
-export function getRangeStart(range: DashboardRange, now = new Date()) {
-  if (range === "last24Hours") {
-    return new Date(now.getTime() - 24 * 3_600_000);
-  }
+export function getRangeStart(range: TimeRange, now = new Date()) {
   if (range === "today") {
-    return getMadridStartOfDay(now);
+    return getLocalStartOfDay(now);
   }
   if (range === "sevenDays") {
-    return getMadridStartOfDay(now, -6);
+    return getLocalStartOfDay(now, -6);
   }
-  if (range === "month") {
-    return getMadridStartOfDay(now, -29);
+  if (range === "thirtyDays") {
+    return getLocalStartOfDay(now, -29);
   }
-
-  const { year: madridYear, month, day } = getMadridDateParts(now);
-  const year = month < 5 || (month === 5 && day < 15) ? madridYear - 1 : madridYear;
-  return fromMadridTime(year, 4, 15);
+  return getLocalStartOfDay(now, -ALL_RANGE_LOOKBACK_DAYS);
 }
 
-export function getSummerEnd(now = new Date()) {
-  const start = getRangeStart("summer", now);
-  const { year } = getMadridDateParts(start);
-  return new Date(fromMadridTime(year, 9, 16).getTime() - 1);
-}
-
-export function getRangeEnd(range: DashboardRange, now = new Date()) {
-  if (range === "summer") {
-    const summerEnd = getSummerEnd(now);
-    return now < summerEnd ? now : summerEnd;
-  }
-
+export function getRangeEnd(now = new Date()) {
   return now;
 }
 
-export function getRangeWindow(range: DashboardRange, now = new Date()) {
+export function getRangeWindow(range: TimeRange, now = new Date()) {
   return {
     start: getRangeStart(range, now),
-    end: getRangeEnd(range, now),
+    end: getRangeEnd(now),
   };
 }

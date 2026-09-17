@@ -4,7 +4,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { ListTree, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { LINE_COLORS, METRO_LINES, type MetroLine } from "@/lib/domain/lines";
+import { ROUTE_COLORS, ROUTE_LABELS, ROUTES, type Route } from "@/lib/domain/routes";
 import { TIME_RANGES, type TimeRange } from "@/lib/domain/ranges";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -15,22 +15,21 @@ import { CenteredPopoverPanel, StickyUtilityBar } from "@/components/ui/popover-
 export function FilterBar({
   dictionary,
   locale,
-  selectedCarSeries,
-  selectedLines,
+  selectedRoutes,
   selectedRange,
+  demoMode = false,
 }: {
   dictionary: Dictionary;
   locale: Locale;
-  selectedCarSeries: number[];
-  selectedLines: MetroLine[];
+  selectedRoutes: Route[];
   selectedRange: TimeRange;
+  demoMode?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
-  const [draftLines, setDraftLines] = useState<MetroLine[]>(selectedLines);
-  const [draftCarSeries, setDraftCarSeries] = useState<number[]>(selectedCarSeries);
+  const [draftRoutes, setDraftRoutes] = useState<Route[]>(selectedRoutes);
   const [draftRange, setDraftRange] = useState<TimeRange>(selectedRange);
 
   useEffect(() => {
@@ -42,46 +41,39 @@ export function FilterBar({
     };
   }, [open, navigationOpen]);
 
-  function href(lines: MetroLine[], range = selectedRange, carSeries = selectedCarSeries) {
+  function href(routes: Route[], range = selectedRange) {
     const params = new URLSearchParams();
-    if (lines.length > 0) params.set("linea", lines.join(","));
-    if (carSeries.length > 0) params.set("serie", carSeries.join(","));
-    if (range !== "summer") params.set("rango", range);
-    return `/${locale}/explorar${params.size ? `?${params.toString()}` : ""}`;
+    if (routes.length > 0) params.set("ruta", routes.join(","));
+    if (range !== "all") params.set("rango", range);
+    const basePath = demoMode ? "/demo/explorar" : `/${locale}/explorar`;
+    return `${basePath}${params.size ? `?${params.toString()}` : ""}`;
   }
 
   function applyFilters() {
     setOpen(false);
     startTransition(() => {
-      router.push(href(draftLines, draftRange, draftCarSeries));
+      router.push(href(draftRoutes, draftRange));
     });
   }
 
   function clearFilters() {
-    setDraftLines([]);
-    setDraftCarSeries([]);
-    setDraftRange("summer");
+    setDraftRoutes([]);
+    setDraftRange("all");
   }
 
-  function toggleLine(line: MetroLine) {
-    setDraftLines((current) => (current.includes(line) ? current.filter((item) => item !== line) : [...current, line]));
-  }
-
-  function toggleCarSeries(series: number) {
-    setDraftCarSeries((current) => (current.includes(series) ? current.filter((item) => item !== series) : [...current, series]));
+  function toggleRoute(route: Route) {
+    setDraftRoutes((current) => (current.includes(route) ? current.filter((item) => item !== route) : [...current, route]));
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setDraftLines(selectedLines);
-      setDraftCarSeries(selectedCarSeries);
+      setDraftRoutes(selectedRoutes);
       setDraftRange(selectedRange);
     }
     setOpen(nextOpen);
   }
 
-  const selectedLineLabel = getSelectedLineLabel(selectedLines, dictionary);
-  const selectedCarSeriesLabel = getSelectedCarSeriesLabel(selectedCarSeries, dictionary);
+  const selectedRouteLabel = getSelectedRouteLabel(selectedRoutes, dictionary);
   const activeRangeLabel = dictionary.explore.ranges[selectedRange];
 
   return (
@@ -91,7 +83,7 @@ export function FilterBar({
             <div className="min-w-0">
               <p className="text-xs font-semibold text-muted">{dictionary.explore.filters.active}</p>
               <p className="truncate text-sm font-semibold">
-                {[selectedLineLabel, selectedCarSeriesLabel, activeRangeLabel].filter(Boolean).join(" · ")}
+                {[selectedRouteLabel, activeRangeLabel].filter(Boolean).join(" · ")}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -152,13 +144,13 @@ export function FilterBar({
             </div>
 
             <div className="mt-5">
-              <p className="mb-2 text-xs font-semibold text-muted">{dictionary.explore.filters.line}</p>
+              <p className="mb-2 text-xs font-semibold text-muted">{dictionary.explore.filters.route}</p>
               <div className="flex flex-wrap items-stretch gap-1.5">
-                <button className={allLinesClass(draftLines.length === 0)} onClick={() => setDraftLines([])} type="button">
-                  {dictionary.explore.allLines}
+                <button className={allRoutesClass(draftRoutes.length === 0)} onClick={() => setDraftRoutes([])} type="button">
+                  {dictionary.explore.allRoutes}
                 </button>
-                {METRO_LINES.map((line) => (
-                  <LineSwatch active={draftLines.includes(line)} label={line} line={line} onClick={() => toggleLine(line)} key={line} />
+                {ROUTES.map((route) => (
+                  <RouteSwatch active={draftRoutes.includes(route)} label={ROUTE_LABELS[route]} route={route} onClick={() => toggleRoute(route)} key={route} />
                 ))}
               </div>
             </div>
@@ -178,49 +170,28 @@ export function FilterBar({
   );
 }
 
-function SeriesSwatch({ active, ariaLabel, label, onClick }: { active: boolean; ariaLabel?: string; label: string; onClick: () => void }) {
-  return (
-    <button
-      aria-label={ariaLabel ?? label}
-      aria-pressed={active}
-      className={cn(
-        "filter-swatch filter-swatch-text selection-flow flex items-center justify-center rounded-md border px-2 py-1 font-mono font-bold tabular-nums transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-        active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-border bg-surface-raised text-foreground hover:bg-surface",
-      )}
-      onClick={onClick}
-      type="button"
-    >
-      {label}
-    </button>
-  );
-}
-
 const EXPLORE_SECTIONS = [
-  { id: "line-evolution", module: "lineEvolution" },
-  { id: "total-reports", module: "totalReports" },
   { id: "report-volume", module: "volume" },
-  { id: "line-cars", module: "lineCars" },
-  { id: "car-series", module: "carSeries" },
-  { id: "worst-cars", module: "worstCars" },
-  { id: "car-explorer", module: "carExplorer" },
-  { id: "heat-trend", module: "trend" },
-  { id: "worst-hours", module: "worstHours" },
-  { id: "fleet", module: "fleet" },
-  { id: "line-details", module: "lineDetails" },
+  { id: "problems", module: "problems" },
+  { id: "categories", module: "categories" },
+  { id: "trend", module: "trend" },
+  { id: "worst-units", module: "worstUnits" },
+  { id: "unit-explorer", module: "unitExplorer" },
+  { id: "route-details", module: "routeDetails" },
 ] as const;
 
-function LineSwatch({
+function RouteSwatch({
   active,
   label,
-  line,
+  route,
   onClick,
 }: {
   active: boolean;
   label: string;
-  line?: MetroLine;
+  route?: Route;
   onClick: () => void;
 }) {
-  const lineColor = line ? LINE_COLORS[line] : null;
+  const routeColor = route ? ROUTE_COLORS[route] : null;
   return (
     <button
       aria-label={label}
@@ -231,28 +202,28 @@ function LineSwatch({
       )}
       onClick={onClick}
       style={
-        active && lineColor
+        active && routeColor
           ? {
-              background: lineColor.fill,
-              color: lineColor.textOnFill,
+              background: routeColor.fill,
+              color: routeColor.textOnFill,
             }
           : undefined
       }
       type="button"
     >
-      {lineColor ? (
+      {routeColor ? (
         <span
           aria-hidden="true"
           className={cn("rounded-full transition duration-200 ease-out", active ? "size-2 bg-white" : "size-1.5")}
-          style={!active ? { background: lineColor.fill } : undefined}
+          style={!active ? { background: routeColor.fill } : undefined}
         />
       ) : null}
-      {line ?? label}
+      {label}
     </button>
   );
 }
 
-function allLinesClass(selected: boolean) {
+function allRoutesClass(selected: boolean) {
   return cn(
     "filter-swatch filter-swatch-text flex items-center justify-center rounded-md border px-2 py-1 font-semibold transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
     selected ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-border bg-surface-raised text-muted hover:bg-surface hover:text-foreground",
@@ -266,14 +237,8 @@ function rangeClass(selected: boolean) {
   );
 }
 
-function getSelectedLineLabel(selectedLines: MetroLine[], dictionary: Dictionary) {
-  if (selectedLines.length === 0) return dictionary.explore.allLines;
-  if (selectedLines.length <= 3) return selectedLines.join(", ");
-  return dictionary.explore.filters.lineCount.replace("{count}", String(selectedLines.length));
-}
-
-function getSelectedCarSeriesLabel(selectedCarSeries: number[], dictionary: Dictionary) {
-  if (selectedCarSeries.length === 0) return null;
-  if (selectedCarSeries.length <= 2) return selectedCarSeries.map((series) => `${dictionary.explore.seriesLabel} ${series}`).join(", ");
-  return dictionary.explore.filters.seriesCount.replace("{count}", String(selectedCarSeries.length));
+function getSelectedRouteLabel(selectedRoutes: Route[], dictionary: Dictionary) {
+  if (selectedRoutes.length === 0) return dictionary.explore.allRoutes;
+  if (selectedRoutes.length <= 3) return selectedRoutes.map((route) => ROUTE_LABELS[route]).join(", ");
+  return dictionary.explore.filters.routeCount.replace("{count}", String(selectedRoutes.length));
 }

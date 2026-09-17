@@ -5,6 +5,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -15,41 +16,68 @@ import {
 } from "recharts";
 import { ChevronDown, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { type CarExplorerOption, type CarExplorerSelection, type DashboardData } from "@/lib/domain/dashboard";
-import { CHART_TOKENS } from "@/lib/design/tokens";
-import { LINE_COLORS, type MetroLine } from "@/lib/domain/lines";
+import { type UnitExplorerOption, type UnitExplorerSelection, type DashboardData } from "@/lib/domain/dashboard";
+import { CHART_TOKENS, SERIES_CHART_COLORS } from "@/lib/design/tokens";
+import { ROUTE_COLORS, ROUTE_LABELS, type Route } from "@/lib/domain/routes";
+import type { ProblemCategory } from "@/lib/domain/problems";
 import type { TimeRange } from "@/lib/domain/ranges";
-import { formatCarCode, normalizeCarCode } from "@/lib/domain/reports";
+import { normalizeUnitCode } from "@/lib/domain/reports";
+import { getProblemLabel } from "@/components/report/problem-label";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { formatNumber } from "@/lib/i18n/format";
-import { LineBadge } from "@/components/ui/line-badge";
+import { RouteBadge } from "@/components/ui/route-badge";
 import { Button } from "@/components/ui/button";
 import { ChartCard } from "./chart-card";
 
-const TOP_LINE_COUNT = 6;
-const WORST_CAR_COLLAPSED_COUNT = 5;
-const WORST_CAR_COUNT = 20;
+const WORST_UNIT_COLLAPSED_COUNT = 5;
+const WORST_UNIT_COUNT = 20;
+
+// Horizontal ranked-bar layout constants (route volume, problems, categories).
+// Kept local to this file because src/lib/** is out of scope for this phase.
+const RANKED_BAR_ROW_HEIGHT_PX = 40;
+const RANKED_BAR_MIN_HEIGHT_PX = 96;
+const RANKED_BAR_LABEL_WIDTH_PX = 132;
+const RANKED_BAR_MARGIN = { top: 4, right: 40, bottom: 4, left: 0 };
+const RANKED_BAR_RADIUS: [number, number, number, number] = [0, 4, 4, 0];
+const WRAP_MAX_CHARS = 20;
+const WRAP_MAX_LINES = 2;
+const WRAP_LINE_HEIGHT_PX = 12;
 
 type ChartModuleBaseProps = {
   dictionary: Dictionary;
   locale: Locale;
   rangeLabel: string;
   selectedRange: TimeRange;
-  selectedLines: MetroLine[];
+  selectedRoutes: Route[];
 };
 
-export function ReportVolumeChartCard({
+type RankedBarItem = {
+  key: string;
+  label: string;
+  value: number;
+  fill?: string;
+};
+
+export function RouteVolumeChartCard({
   data,
   dictionary,
   locale,
   rangeLabel,
-  selectedLines,
+  selectedRoutes,
 }: Omit<ChartModuleBaseProps, "selectedRange"> & {
-  data: Pick<DashboardData, "lineSummaries">;
+  data: Pick<DashboardData, "routeSummaries">;
 }) {
-  const visibleLines = data.lineSummaries.filter((summary) => (selectedLines.length > 0 ? selectedLines.includes(summary.line) : summary.reports > 0));
-  const reportVolumeLines = (selectedLines.length > 0 ? visibleLines : visibleLines.slice(0, TOP_LINE_COUNT)).toSorted((a, b) => b.reports - a.reports);
+  const visibleRoutes = data.routeSummaries
+    .filter((summary) => (selectedRoutes.length > 0 ? selectedRoutes.includes(summary.route) : true))
+    .toSorted((a, b) => b.reports - a.reports);
+
+  const items: RankedBarItem[] = visibleRoutes.map((summary) => ({
+    key: summary.route,
+    label: ROUTE_LABELS[summary.route],
+    value: summary.reports,
+    fill: ROUTE_COLORS[summary.route].fill,
+  }));
 
   return (
     <ChartCard
@@ -59,182 +87,89 @@ export function ReportVolumeChartCard({
       takeaway={dictionary.explore.chartTakeaways.volume}
       title={dictionary.explore.modules.volume}
     >
-      <div className={CHART_TOKENS.moduleHeightClass}>
-        <ResponsiveContainer height="100%" width="100%">
-          <BarChart data={reportVolumeLines} margin={CHART_TOKENS.compactMargin}>
-            <CartesianGrid stroke="var(--border)" vertical={false} />
-            <XAxis axisLine={false} dataKey="line" tickLine={false} />
-            <YAxis axisLine={false} allowDecimals={false} tickLine={false} />
-            <Tooltip content={<LocalizedTooltip labelName={dictionary.common.reports} locale={locale} />} cursor={{ fill: "var(--surface)" }} />
-            <Bar animationDuration={CHART_TOKENS.animationDurationMs} dataKey="reports" name={dictionary.common.reports} radius={CHART_TOKENS.barRadius}>
-              {reportVolumeLines.map((item) => (
-                <Cell fill={LINE_COLORS[item.line].fill} key={item.line} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <RankedBarChart items={items} locale={locale} valueName={dictionary.common.reports} />
     </ChartCard>
   );
 }
 
-export function LineCarsChartCard({
+export function ProblemsChartCard({
   data,
   dictionary,
   locale,
   rangeLabel,
-  selectedLines,
-}: Omit<ChartModuleBaseProps, "selectedRange"> & {
-  data: Pick<DashboardData, "lineSummaries">;
+}: Omit<ChartModuleBaseProps, "selectedRange" | "selectedRoutes"> & {
+  data: Pick<DashboardData, "problemSummaries">;
 }) {
-  const visibleLines = data.lineSummaries.filter((summary) => (selectedLines.length > 0 ? selectedLines.includes(summary.line) : summary.reports > 0));
-  const carLines = (selectedLines.length > 0 ? visibleLines : visibleLines.slice(0, TOP_LINE_COUNT)).toSorted((a, b) => b.carsReported - a.carsReported);
+  const items: RankedBarItem[] = data.problemSummaries.map((summary) => ({
+    key: summary.problem,
+    label: getProblemLabel(dictionary, summary.problem),
+    value: summary.reports,
+  }));
 
   return (
     <ChartCard
       dictionary={dictionary}
-      id="line-cars"
+      id="problems"
       rangeLabel={rangeLabel}
-      takeaway={dictionary.explore.chartTakeaways.lineCars}
-      title={dictionary.explore.modules.lineCars}
+      takeaway={dictionary.explore.chartTakeaways.problems}
+      title={dictionary.explore.modules.problems}
     >
-      <div className={CHART_TOKENS.moduleHeightClass}>
-        <ResponsiveContainer height="100%" width="100%">
-          <BarChart data={carLines} margin={CHART_TOKENS.compactMargin}>
-            <CartesianGrid stroke="var(--border)" vertical={false} />
-            <XAxis axisLine={false} dataKey="line" tickLine={false} />
-            <YAxis axisLine={false} allowDecimals={false} tickLine={false} />
-            <Tooltip content={<LocalizedTooltip labelName={dictionary.explore.carsReportedLabel} locale={locale} />} cursor={{ fill: "var(--surface)" }} />
-            <Bar animationDuration={CHART_TOKENS.animationDurationMs} dataKey="carsReported" name={dictionary.explore.carsReportedLabel} radius={CHART_TOKENS.barRadius}>
-              {carLines.map((item) => (
-                <Cell fill={LINE_COLORS[item.line].fill} key={item.line} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <RankedBarChart items={items} locale={locale} valueName={dictionary.common.reports} />
     </ChartCard>
   );
 }
 
-export function WorstCarsExplorerChartCards({
+const CATEGORY_COLORS: Record<ProblemCategory, string> = {
+  fiabilidad: SERIES_CHART_COLORS[0],
+  paradas: SERIES_CHART_COLORS[1],
+  seguridad: SERIES_CHART_COLORS[2],
+  condicion: SERIES_CHART_COLORS[3],
+  convivencia: SERIES_CHART_COLORS[4],
+};
+
+export function CategoriesChartCard({
   data,
   dictionary,
   locale,
   rangeLabel,
-  selectedRange,
-  initialCar,
-  lines,
-  carSeries,
-}: Omit<ChartModuleBaseProps, "selectedLines"> & {
-  data: { carExplorer: { options: CarExplorerOption[] } };
-  initialCar?: string | null;
-  lines: MetroLine[];
-  carSeries: number[];
+}: Omit<ChartModuleBaseProps, "selectedRange" | "selectedRoutes"> & {
+  data: Pick<DashboardData, "categorySummaries">;
 }) {
-  const initialSelectionCar = initialCar ?? data.carExplorer.options[0]?.car ?? null;
-  const [selectedCar, setSelectedCar] = useState(initialSelectionCar);
-  const [activeSelection, setActiveSelection] = useState<CarExplorerSelection | null>(null);
-  const [isChartPending, setIsChartPending] = useState(Boolean(initialSelectionCar));
-  const [loadError, setLoadError] = useState(false);
-  const [requestVersion, setRequestVersion] = useState(0);
-  const linesKey = lines.join(",");
-  const carSeriesKey = carSeries.join(",");
-
-  useEffect(() => {
-    if (!selectedCar) return;
-    const controller = new AbortController();
-    const params = new URLSearchParams({ coche: selectedCar, rango: selectedRange });
-    if (linesKey) params.set("linea", linesKey);
-    if (carSeriesKey) params.set("serie", carSeriesKey);
-    fetch(`/api/dashboard/car?${params.toString()}`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("car_detail_failed");
-        const payload = await response.json() as { selection: CarExplorerSelection | null };
-        setActiveSelection(payload.selection);
-      })
-      .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setLoadError(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsChartPending(false);
-      });
-    return () => controller.abort();
-  }, [carSeriesKey, linesKey, requestVersion, selectedCar, selectedRange]);
-
-  function selectCar(car: string) {
-    setActiveSelection(null);
-    setIsChartPending(true);
-    setLoadError(false);
-    setSelectedCar(car);
-    setRequestVersion((version) => version + 1);
-  }
-
-  return (
-    <>
-      <ChartCard
-        dictionary={dictionary}
-        id="worst-cars"
-        rangeLabel={rangeLabel}
-        takeaway={dictionary.explore.chartTakeaways.worstCars}
-        title={dictionary.explore.modules.worstCars}
-      >
-        <WorstCarsList
-          data={data}
-          dictionary={dictionary}
-          locale={locale}
-          collapsedCount={WORST_CAR_COLLAPSED_COUNT}
-          expandedCount={WORST_CAR_COUNT}
-          onSelectCar={(car) => {
-            selectCar(car);
-            window.requestAnimationFrame(() => {
-              document.getElementById("car-explorer")?.scrollIntoView({ behavior: "smooth", block: "start" });
-            });
-          }}
-        />
-      </ChartCard>
-
-      <ChartCard
-        dictionary={dictionary}
-        id="car-explorer"
-        rangeLabel={rangeLabel}
-        title={dictionary.explore.modules.carExplorer}
-      >
-        <CarExplorer
-          data={data}
-          dictionary={dictionary}
-          key={`${selectedRange}-${selectedCar ?? "none"}-${data.carExplorer.options.length}`}
-          locale={locale}
-          selectedCar={selectedCar}
-          activeSelection={activeSelection}
-          isChartPending={isChartPending}
-          loadError={loadError}
-          onSelectCar={selectCar}
-          selectedRange={selectedRange}
-        />
-      </ChartCard>
-    </>
-  );
-}
-
-export function HeatTrendChartCard({
-  data,
-  dictionary,
-  locale,
-  rangeLabel,
-  selectedRange,
-  selectedLines,
-}: ChartModuleBaseProps & {
-  data: Pick<DashboardData, "trend" | "lineSummaries">;
-}) {
-  const heatTrendLines = selectedLines.length > 0 ? selectedLines : data.lineSummaries.map((summary) => summary.line);
-  const xAxisInterval = selectedRange === "today" ? 2 : selectedRange === "sevenDays" ? 0 : "preserveStartEnd";
+  const items: RankedBarItem[] = data.categorySummaries.map((summary) => ({
+    key: summary.category,
+    label: dictionary.problemCategories[summary.category],
+    value: summary.reports,
+    fill: CATEGORY_COLORS[summary.category],
+  }));
 
   return (
     <ChartCard
       dictionary={dictionary}
-      help={dictionary.explore.fleetAdjustedScoreHelp}
-      id="heat-trend"
+      id="categories"
+      rangeLabel={rangeLabel}
+      takeaway={dictionary.explore.chartTakeaways.categories}
+      title={dictionary.explore.modules.categories}
+    >
+      <RankedBarChart items={items} locale={locale} valueName={dictionary.common.reports} />
+    </ChartCard>
+  );
+}
+
+export function TrendChartCard({
+  data,
+  dictionary,
+  locale,
+  rangeLabel,
+  selectedRange,
+}: Omit<ChartModuleBaseProps, "selectedRoutes"> & {
+  data: Pick<DashboardData, "trend">;
+}) {
+  const xAxisInterval = getTimeAxisTickInterval(data.trend.length, selectedRange);
+
+  return (
+    <ChartCard
+      dictionary={dictionary}
+      id="trend"
       rangeLabel={rangeLabel}
       takeaway={dictionary.explore.chartTakeaways.trend}
       title={dictionary.explore.modules.trend}
@@ -244,84 +179,173 @@ export function HeatTrendChartCard({
           <LineChart data={data.trend} margin={CHART_TOKENS.compactMargin}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis axisLine={false} dataKey="label" interval={xAxisInterval} tickLine={false} />
-            <YAxis axisLine={false} tickFormatter={(value) => formatNumber(Number(value), locale)} tickLine={false} />
-            <Tooltip content={<LocalizedTooltip labelName={dictionary.explore.fleetAdjustedScoreLabel} locale={locale} />} />
-            {heatTrendLines.map((line) => (
-              <Line
-                animationDuration={CHART_TOKENS.animationDurationMs}
-                dataKey={line}
-                dot={false}
-                key={line}
-                name={line}
-                stroke={LINE_COLORS[line].fill}
-                strokeWidth={2}
-                type="monotone"
-              />
-            ))}
+            <YAxis axisLine={false} allowDecimals={false} tickFormatter={(value) => formatNumber(Number(value), locale)} tickLine={false} />
+            <Tooltip content={<LocalizedTooltip labelName={dictionary.common.reports} locale={locale} />} />
+            <Line
+              animationDuration={CHART_TOKENS.animationDurationMs}
+              dataKey="reports"
+              dot={false}
+              name={dictionary.common.reports}
+              stroke="var(--accent)"
+              strokeWidth={2}
+              type="monotone"
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <LineLegend lines={heatTrendLines} />
     </ChartCard>
   );
 }
 
-function CarExplorer({
+export function UnitsExplorerChartCards({
   data,
   dictionary,
   locale,
-  selectedCar,
-  onSelectCar,
+  rangeLabel,
+  selectedRange,
+  initialUnit,
+  routes,
+  includeDemo = false,
+}: Omit<ChartModuleBaseProps, "selectedRoutes"> & {
+  data: { unitExplorer: { options: UnitExplorerOption[] } };
+  initialUnit?: string | null;
+  routes: Route[];
+  includeDemo?: boolean;
+}) {
+  const initialSelectionUnit = initialUnit ?? data.unitExplorer.options[0]?.unit ?? null;
+  const [selectedUnit, setSelectedUnit] = useState(initialSelectionUnit);
+  const [activeSelection, setActiveSelection] = useState<UnitExplorerSelection | null>(null);
+  const [isChartPending, setIsChartPending] = useState(Boolean(initialSelectionUnit));
+  const [loadError, setLoadError] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
+  const routesKey = routes.join(",");
+
+  useEffect(() => {
+    if (!selectedUnit) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ unidad: selectedUnit, rango: selectedRange });
+    if (routesKey) params.set("ruta", routesKey);
+    if (includeDemo) params.set("demo", "1");
+    fetch(`/api/dashboard/unit?${params.toString()}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("unit_detail_failed");
+        const payload = (await response.json()) as { selection: UnitExplorerSelection | null };
+        setActiveSelection(payload.selection);
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setLoadError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsChartPending(false);
+      });
+    return () => controller.abort();
+  }, [routesKey, requestVersion, selectedUnit, selectedRange, includeDemo]);
+
+  function selectUnit(unit: string) {
+    setActiveSelection(null);
+    setIsChartPending(true);
+    setLoadError(false);
+    setSelectedUnit(unit);
+    setRequestVersion((version) => version + 1);
+  }
+
+  return (
+    <>
+      <ChartCard
+        dictionary={dictionary}
+        id="worst-units"
+        rangeLabel={rangeLabel}
+        takeaway={dictionary.explore.chartTakeaways.worstUnits}
+        title={dictionary.explore.modules.worstUnits}
+      >
+        <MostReportedUnitsList
+          data={data}
+          dictionary={dictionary}
+          collapsedCount={WORST_UNIT_COLLAPSED_COUNT}
+          expandedCount={WORST_UNIT_COUNT}
+          onSelectUnit={(unit) => {
+            selectUnit(unit);
+            window.requestAnimationFrame(() => {
+              document.getElementById("unit-explorer")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          }}
+        />
+      </ChartCard>
+
+      <ChartCard dictionary={dictionary} id="unit-explorer" rangeLabel={rangeLabel} title={dictionary.explore.modules.unitExplorer}>
+        <UnitExplorer
+          data={data}
+          dictionary={dictionary}
+          key={`${selectedRange}-${selectedUnit ?? "none"}-${data.unitExplorer.options.length}`}
+          locale={locale}
+          selectedUnit={selectedUnit}
+          activeSelection={activeSelection}
+          isChartPending={isChartPending}
+          loadError={loadError}
+          onSelectUnit={selectUnit}
+          selectedRange={selectedRange}
+        />
+      </ChartCard>
+    </>
+  );
+}
+
+function UnitExplorer({
+  data,
+  dictionary,
+  locale,
+  selectedUnit,
+  onSelectUnit,
   selectedRange,
   activeSelection,
   isChartPending,
   loadError,
 }: {
-  data: { carExplorer: { options: CarExplorerOption[] } };
+  data: { unitExplorer: { options: UnitExplorerOption[] } };
   dictionary: Dictionary;
   locale: Locale;
-  selectedCar: string | null;
-  onSelectCar: (car: string) => void;
+  selectedUnit: string | null;
+  onSelectUnit: (unit: string) => void;
   selectedRange: TimeRange;
-  activeSelection: CarExplorerSelection | null;
+  activeSelection: UnitExplorerSelection | null;
   isChartPending: boolean;
   loadError: boolean;
 }) {
-  const activeCar = selectedCar ?? data.carExplorer.options[0]?.car ?? null;
-  const [draftCar, setDraftCar] = useState(activeCar ? formatCarCode(activeCar) : "");
+  const activeUnit = selectedUnit ?? data.unitExplorer.options[0]?.unit ?? null;
+  const [draftUnit, setDraftUnit] = useState(activeUnit ?? "");
   const [error, setError] = useState<string | null>(null);
-  const options = data.carExplorer.options;
-  const optionCars = useMemo(() => new Set([...options.map((option) => option.car), ...(activeCar ? [activeCar] : [])]), [activeCar, options]);
+  const options = data.unitExplorer.options;
+  const optionUnits = useMemo(() => new Set([...options.map((option) => option.unit), ...(activeUnit ? [activeUnit] : [])]), [activeUnit, options]);
 
   function submitSelection() {
-    const normalized = normalizeCarCode(draftCar);
-    if (!normalized || !optionCars.has(normalized)) {
-      setError(dictionary.explore.carExplorer.invalid);
+    const normalized = normalizeUnitCode(draftUnit);
+    if (!normalized || !optionUnits.has(normalized)) {
+      setError(dictionary.explore.unitExplorer.invalid);
       return;
     }
-    setDraftCar(formatCarCode(normalized));
+    setDraftUnit(normalized);
     setError(null);
-    if (normalized === activeCar) return;
-    onSelectCar(normalized);
+    if (normalized === activeUnit) return;
+    onSelectUnit(normalized);
   }
 
-  if (!activeCar) {
-    return <p className="rounded-md bg-surface p-3 text-sm text-muted">{dictionary.explore.carExplorer.empty}</p>;
+  if (!activeUnit) {
+    return <p className="rounded-md bg-surface p-3 text-sm text-muted">{dictionary.explore.unitExplorer.empty}</p>;
   }
 
   return (
     <div>
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
-          <label className="sr-only" htmlFor="car-explorer-input">
-            {dictionary.explore.carExplorer.label}
+          <label className="sr-only" htmlFor="unit-explorer-input">
+            {dictionary.explore.unitExplorer.label}
           </label>
           <input
             className="min-h-11 w-full rounded-md border border-border bg-background px-3 font-mono text-sm font-semibold outline-none transition duration-200 ease-out placeholder:text-muted focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            id="car-explorer-input"
-            list="car-explorer-options"
+            id="unit-explorer-input"
+            list="unit-explorer-options"
             onChange={(event) => {
-              setDraftCar(event.target.value);
+              setDraftUnit(event.target.value);
               setError(null);
             }}
             onKeyDown={(event) => {
@@ -330,51 +354,58 @@ function CarExplorer({
                 submitSelection();
               }
             }}
-            placeholder={dictionary.explore.carExplorer.placeholder}
+            placeholder={dictionary.explore.unitExplorer.placeholder}
             suppressHydrationWarning
-            value={draftCar}
+            value={draftUnit}
           />
-          <datalist id="car-explorer-options">
+          <datalist id="unit-explorer-options">
             {options.map((option) => (
-              <option key={option.car} value={formatCarCode(option.car)} />
+              <option key={option.unit} value={option.unit} />
             ))}
           </datalist>
         </div>
-        <Button aria-label={dictionary.explore.carExplorer.search} className="size-11 min-h-0 px-0 py-0" onClick={submitSelection} type="button" variant="secondary">
+        <Button aria-label={dictionary.explore.unitExplorer.search} className="size-11 min-h-0 px-0 py-0" onClick={submitSelection} type="button" variant="secondary">
           <Search aria-hidden="true" className="size-4" />
         </Button>
       </div>
       {error ? <p className="mt-2 text-[0.6875rem] font-semibold leading-4 text-danger">{error}</p> : null}
-      {loadError ? <p className="mt-2 rounded-md bg-surface p-3 text-sm text-danger">{dictionary.explore.carExplorer.loadError}</p> : null}
+      {loadError ? <p className="mt-2 rounded-md bg-surface p-3 text-sm text-danger">{dictionary.explore.unitExplorer.loadError}</p> : null}
 
-      {isChartPending ? <CarExplorerChartSkeleton /> : activeSelection ? (
+      {isChartPending ? (
+        <UnitExplorerChartSkeleton />
+      ) : activeSelection ? (
         <>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-md border border-border bg-surface p-3">
-              <p className="text-xs font-semibold text-muted">{dictionary.explore.carExplorer.reportedLines}</p>
+              <p className="text-xs font-semibold text-muted">{dictionary.explore.unitExplorer.reportedRoutes}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {activeSelection.lines.map((line) => (
-                  <LineBadge line={line} key={line} />
+                {activeSelection.routes.map((route) => (
+                  <RouteBadge key={route} route={route} />
                 ))}
               </div>
             </div>
             <div className="rounded-md border border-border bg-surface p-3">
-              <p className="text-xs font-semibold text-muted">{dictionary.explore.carExplorer.totalReports}</p>
+              <p className="text-xs font-semibold text-muted">{dictionary.explore.unitExplorer.totalReports}</p>
               <div className="mt-1 flex items-center justify-end">
                 <span className="font-mono text-3xl font-semibold leading-none tabular-nums">{formatNumber(activeSelection.reports, locale)}</span>
               </div>
             </div>
           </div>
-          <div className={`${CHART_TOKENS.moduleHeightClass} mt-4`} data-testid="car-explorer-chart">
-              <ResponsiveContainer height="100%" width="100%">
-                <BarChart data={activeSelection.history} margin={CHART_TOKENS.compactMargin}>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis axisLine={false} dataKey="label" interval={selectedRange === "today" ? 2 : selectedRange === "sevenDays" ? 0 : "preserveStartEnd"} tickLine={false} />
-                  <YAxis axisLine={false} allowDecimals={false} tickLine={false} />
-                  <Tooltip content={<LocalizedTooltip labelName={dictionary.common.reports} locale={locale} />} cursor={{ fill: "var(--surface)" }} />
-                  <Bar animationDuration={CHART_TOKENS.animationDurationMs} dataKey="reports" fill="var(--accent)" name={dictionary.common.reports} radius={CHART_TOKENS.barRadius} />
-                </BarChart>
-              </ResponsiveContainer>
+          <div className={`${CHART_TOKENS.moduleHeightClass} mt-4`} data-testid="unit-explorer-chart">
+            <ResponsiveContainer height="100%" width="100%">
+              <BarChart data={activeSelection.history} margin={CHART_TOKENS.compactMargin}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis
+                  axisLine={false}
+                  dataKey="label"
+                  interval={getTimeAxisTickInterval(activeSelection.history.length, selectedRange)}
+                  tickLine={false}
+                />
+                <YAxis axisLine={false} allowDecimals={false} tickLine={false} />
+                <Tooltip content={<LocalizedTooltip labelName={dictionary.common.reports} locale={locale} />} cursor={{ fill: "var(--surface)" }} />
+                <Bar animationDuration={CHART_TOKENS.animationDurationMs} dataKey="reports" fill="var(--accent)" name={dictionary.common.reports} radius={CHART_TOKENS.barRadius} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </>
       ) : null}
@@ -382,9 +413,9 @@ function CarExplorer({
   );
 }
 
-function CarExplorerChartSkeleton() {
+function UnitExplorerChartSkeleton() {
   return (
-    <div className={`${CHART_TOKENS.moduleHeightClass} mt-4 rounded-md bg-surface p-3`} data-testid="car-explorer-loading">
+    <div className={`${CHART_TOKENS.moduleHeightClass} mt-4 rounded-md bg-surface p-3`} data-testid="unit-explorer-loading">
       <div className="flex h-full items-end gap-2">
         {Array.from({ length: 12 }, (_, index) => (
           <span
@@ -396,6 +427,98 @@ function CarExplorerChartSkeleton() {
         ))}
       </div>
     </div>
+  );
+}
+
+// Recharts' "preserveStartEnd" interval keeps thinning ticks as the axis
+// gets crowded, but it never collapses hard enough for the "all" range's
+// hundreds of daily buckets on a phone-width axis, so labels overlap. Target
+// a fixed tick count instead and derive a plain numeric interval from it.
+function getTimeAxisTickInterval(bucketCount: number, range: TimeRange): number {
+  // "today" buckets are short hour labels ("05"); "sevenDays" buckets are
+  // short weekday abbreviations ("mié") that always fit at their natural
+  // count. "thirtyDays"/"all" buckets are longer "17 sept" labels, so they
+  // need a much lower tick target to avoid overlapping on a phone-width axis.
+  const maxTicks = range === "today" ? 8 : range === "sevenDays" ? 7 : 4;
+  if (bucketCount <= maxTicks) return 0;
+  return Math.ceil(bucketCount / maxTicks) - 1;
+}
+
+function RankedBarChart({
+  items,
+  locale,
+  valueName,
+  defaultFill = "var(--accent)",
+}: {
+  items: RankedBarItem[];
+  locale: Locale;
+  valueName: string;
+  defaultFill?: string;
+}) {
+  const height = Math.max(RANKED_BAR_MIN_HEIGHT_PX, items.length * RANKED_BAR_ROW_HEIGHT_PX);
+
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer height="100%" width="100%">
+        <BarChart data={items} layout="vertical" margin={RANKED_BAR_MARGIN}>
+          <CartesianGrid horizontal={false} stroke="var(--border)" />
+          <XAxis allowDecimals={false} axisLine={false} tickLine={false} type="number" />
+          <YAxis axisLine={false} dataKey="label" tick={<WrappedAxisTick />} tickLine={false} type="category" width={RANKED_BAR_LABEL_WIDTH_PX} />
+          <Tooltip content={<LocalizedTooltip labelName={valueName} locale={locale} />} cursor={{ fill: "var(--surface)" }} />
+          <Bar animationDuration={CHART_TOKENS.animationDurationMs} dataKey="value" name={valueName} radius={RANKED_BAR_RADIUS}>
+            {items.map((item) => (
+              <Cell fill={item.fill ?? defaultFill} key={item.key} />
+            ))}
+            <LabelList
+              dataKey="value"
+              fill="var(--foreground)"
+              fontSize={12}
+              formatter={(value: unknown) => formatNumber(Number(value), locale)}
+              position="right"
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function wrapLabel(label: string): string[] {
+  const words = label.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > WRAP_MAX_CHARS && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+
+  if (lines.length > WRAP_MAX_LINES) {
+    const visible = lines.slice(0, WRAP_MAX_LINES);
+    const lastIndex = WRAP_MAX_LINES - 1;
+    visible[lastIndex] = `${visible[lastIndex].slice(0, Math.max(0, WRAP_MAX_CHARS - 1))}…`;
+    return visible;
+  }
+  return lines;
+}
+
+function WrappedAxisTick({ x = 0, y = 0, payload }: { x?: number; y?: number; payload?: { value: string } }) {
+  const lines = wrapLabel(payload?.value ?? "");
+  const firstLineOffset = -((lines.length - 1) * WRAP_LINE_HEIGHT_PX) / 2 + 4;
+
+  return (
+    <text fill="var(--muted)" fontSize={11} textAnchor="end" x={x - 8} y={y}>
+      {lines.map((line, index) => (
+        <tspan dy={index === 0 ? firstLineOffset : WRAP_LINE_HEIGHT_PX} key={`${line}-${index}`} x={x - 8}>
+          {line}
+        </tspan>
+      ))}
+    </text>
   );
 }
 
@@ -434,66 +557,51 @@ function LocalizedTooltip({
   );
 }
 
-function LineLegend({ lines }: { lines: MetroLine[] }) {
-  return (
-    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
-      {lines.map((line) => (
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted" key={line}>
-          <span aria-hidden="true" className="h-2 w-3 rounded-full" style={{ background: LINE_COLORS[line].fill }} />
-          {line}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function WorstCarsList({
+function MostReportedUnitsList({
   data,
   dictionary,
-  locale,
   collapsedCount,
   expandedCount,
-  onSelectCar,
+  onSelectUnit,
 }: {
-  data: Pick<DashboardData, "carExplorer">;
+  data: Pick<DashboardData, "unitExplorer">;
   dictionary: Dictionary;
-  locale: Locale;
   collapsedCount: number;
   expandedCount: number;
-  onSelectCar: (car: string) => void;
+  onSelectUnit: (unit: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const worstCars = data.carExplorer.options;
+  const mostReportedUnits = data.unitExplorer.options;
 
-  if (worstCars.length === 0) {
+  if (mostReportedUnits.length === 0) {
     return <p className="rounded-md bg-surface p-3 text-sm text-muted">{dictionary.explore.noRecentReport}</p>;
   }
 
-  const visibleCars = worstCars.slice(0, expanded ? expandedCount : collapsedCount);
-  const canToggle = worstCars.length > collapsedCount;
+  const visibleUnits = mostReportedUnits.slice(0, expanded ? expandedCount : collapsedCount);
+  const canToggle = mostReportedUnits.length > collapsedCount;
 
   return (
     <div className="flex flex-col gap-2">
-      {visibleCars.map((car) => (
+      {visibleUnits.map((unit) => (
         <button
           className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-md border border-border bg-surface p-3 text-left transition duration-200 ease-out hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          data-testid="worst-car-row"
-          key={car.car}
-          onClick={() => onSelectCar(car.car)}
+          data-testid="worst-unit-row"
+          key={unit.unit}
+          onClick={() => onSelectUnit(unit.unit)}
           type="button"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="flex flex-wrap gap-1.5">
-                {car.lines.map((line) => (
-                  <LineBadge line={line} key={line} />
+                {unit.routes.map((route) => (
+                  <RouteBadge key={route} route={route} />
                 ))}
               </span>
-              <span className="font-mono text-sm font-semibold">{formatCarCode(car.car)}</span>
+              <span className="font-mono text-sm font-semibold">{unit.unit}</span>
             </div>
           </div>
           <div className="text-right">
-            <span className="block font-mono text-2xl font-semibold leading-none tabular-nums">{car.reports}</span>
+            <span className="block font-mono text-2xl font-semibold leading-none tabular-nums">{unit.reports}</span>
             <span className="mt-1 block text-[0.68rem] font-semibold leading-none text-muted">{dictionary.explore.reportsLabel}</span>
           </div>
         </button>

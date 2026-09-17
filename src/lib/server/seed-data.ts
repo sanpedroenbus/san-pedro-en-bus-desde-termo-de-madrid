@@ -1,45 +1,123 @@
-import type { Problem } from "@/lib/domain/heat";
-import type { MetroLine } from "@/lib/domain/lines";
+import type { Problem } from "@/lib/domain/problems";
+import type { Route } from "@/lib/domain/routes";
 import type { Report } from "@/lib/domain/reports";
 
 const now = new Date();
-
-const hotCars = ["51", "54", "12", "73", "41"];
-const l5Cars = ["02", "300", "120", "44"];
-const normalCars = ["201", "304", "12", "66", "10", "204"];
 
 function hoursAgo(hours: number) {
   return new Date(now.getTime() - hours * 3_600_000);
 }
 
-function makeReport(index: number, line: MetroLine, problems: Problem[], hours: number, car: string | null): Report {
+function makeReport(index: number, route: Route, unit: string | null, problems: Problem[], hours: number): Report {
   return {
     id: `seed-${index}`,
-    line,
-    car,
+    route,
+    unit,
     problems,
     createdAt: hoursAgo(hours),
     hiddenAt: null,
   };
 }
 
+// Mirrors supabase/seed.sql: ~95 reports over the last ~30 days. SAN_RAMON and
+// LA_EUROPA are deliberately the two worst routes, units mix short numbers
+// ("51", "99") with plate-like codes ("SJB123"), ~34% of reports carry no
+// unit, all 16 problems are represented, and many reports carry multiple
+// problems at once so local dev matches a seeded database.
 export const seedReports: Report[] = [
-  ...Array.from({ length: 24 }, (_, index) =>
-    makeReport(index, "LA_CAMPINA", index % 5 === 0 ? ["hacinados"] : ["chofer_trato_mal", "conduccion_temeraria"], index * 0.55, hotCars[index % hotCars.length]),
-  ),
-  ...Array.from({ length: 17 }, (_, index) =>
-    makeReport(100 + index, "SALITRILLOS", index % 4 === 0 ? ["hacinados"] : ["no_hizo_parada", "horario_sin_servicio"], index * 0.8, l5Cars[index % l5Cars.length]),
-  ),
-  ...Array.from({ length: 16 }, (_, index) =>
-    makeReport(
-      200 + index,
-      (["GRANADILLA", "SAN_RAMON", "VARGAS_ARAYA", "SABANILLA"] as MetroLine[])[index % 4],
-      index % 6 === 0 ? ["hacinados"] : [],
-      index * 2.5,
-      index % 3 === 0 ? null : normalCars[index % normalCars.length],
-    ),
-  ),
-  makeReport(300, "LA_CAMPINA", [], 3.2, "51"),
-  makeReport(301, "SALITRILLOS", [], 4.4, null),
-  makeReport(302, "BARRIO_PINTO", ["olia_mal_sucio"], 1.6, "73"),
+  makeReport(0, "BARRIO_PINTO", null, ["hacinados"], 21.6),
+  makeReport(1, "SAN_RAMON", null, ["acoso"], 42.0333),
+  makeReport(2, "SAN_RAMON", "62", ["pasajero_sin_audifonos"], 45.5833),
+  makeReport(3, "BARRIO_PINTO", null, ["horario_sin_servicio", "hacinados"], 49.4),
+  makeReport(4, "LA_EUROPA", null, ["no_hizo_parada", "paro_otro_lado"], 61.5833),
+  makeReport(5, "GRANADILLA", "51", ["horario_sin_servicio", "olia_mal_sucio"], 64.1167),
+  makeReport(6, "SABANILLA", "91", ["pasajero_violento", "olia_mal_sucio"], 67.2833),
+  makeReport(7, "LA_EUROPA", "99", ["duro_toda_la_vida"], 67.7333),
+  makeReport(8, "LA_EUROPA", "18", ["paro_otro_lado"], 81.5167),
+  makeReport(9, "LA_EUROPA", null, ["pasajero_violento", "chofer_trato_mal", "volumen_molesto"], 86.1167),
+  makeReport(10, "LA_EUROPA", "41", ["paro_otro_lado", "insegura_parada"], 89.05),
+  makeReport(11, "SABANILLA", "51", ["no_paso_google_maps", "conduccion_temeraria"], 115.9167),
+  makeReport(12, "CEDROS", null, ["no_horario_claro", "paro_otro_lado"], 122.7833),
+  makeReport(13, "SAN_RAMON", "91", ["horario_sin_servicio"], 154.7833),
+  makeReport(14, "SALITRILLOS", null, ["duro_toda_la_vida", "pasajero_sin_audifonos"], 154.95),
+  makeReport(15, "BARRIO_PINTO", "SJB123", ["hacinados", "pasajero_sin_audifonos"], 157.0167),
+  makeReport(16, "LA_CAMPINA", "24", ["pasajero_sin_audifonos"], 162.3333),
+  makeReport(17, "LA_EUROPA", "12", ["no_horario_claro", "no_hizo_parada", "volumen_molesto"], 166.9167),
+  makeReport(18, "CEDROS", "58", ["acoso"], 171.1167),
+  makeReport(19, "LA_EUROPA", "SPB045", ["pasajero_violento", "cucarachas"], 173.1667),
+  makeReport(20, "LA_CAMPINA", null, ["insegura_parada", "chofer_trato_mal"], 176.2833),
+  makeReport(21, "SALITRILLOS", "SJ0912", ["paro_otro_lado", "hacinados"], 184),
+  makeReport(22, "SAN_RAMON", "SJ0912", ["pasajero_sin_audifonos"], 198.9833),
+  makeReport(23, "LA_EUROPA", "84", ["no_hizo_parada", "hacinados", "pasajero_sin_audifonos"], 199.8),
+  makeReport(24, "BARRIO_PINTO", "24", ["chofer_trato_mal"], 202.4333),
+  makeReport(25, "LA_CAMPINA", null, ["no_hizo_parada", "acoso"], 202.8),
+  makeReport(26, "LA_EUROPA", "62", ["no_paso_google_maps", "no_hizo_parada", "hacinados"], 205.9167),
+  makeReport(27, "SABANILLA", "33", ["acoso", "chofer_trato_mal"], 215.9333),
+  makeReport(28, "LA_CAMPINA", null, ["no_hizo_parada", "paro_otro_lado"], 226.4167),
+  makeReport(29, "SABANILLA", "BUS217", ["volumen_molesto"], 237.8167),
+  makeReport(30, "SAN_RAMON", "SJ0912", ["hacinados"], 245.25),
+  makeReport(31, "SALITRILLOS", "BUS217", ["chofer_trato_mal"], 249.45),
+  makeReport(32, "VARGAS_ARAYA", "CR4521", ["cucarachas"], 272.2167),
+  makeReport(33, "GRANADILLA", "SJ0912", ["no_horario_claro", "volumen_molesto"], 276.55),
+  makeReport(34, "SALITRILLOS", "SJB123", ["paro_otro_lado", "olia_mal_sucio"], 286.1333),
+  makeReport(35, "SABANILLA", null, ["duro_toda_la_vida", "no_hizo_parada"], 304.3833),
+  makeReport(36, "LA_EUROPA", "SPB045", ["hacinados"], 305.35),
+  makeReport(37, "VARGAS_ARAYA", "91", ["no_paso_google_maps", "no_hizo_parada"], 315.25),
+  makeReport(38, "LA_EUROPA", "CR4521", ["no_horario_claro"], 321.9167),
+  makeReport(39, "VARGAS_ARAYA", "BUS217", ["paro_otro_lado"], 323.8833),
+  makeReport(40, "SAN_RAMON", "SJB123", ["cucarachas"], 345.95),
+  makeReport(41, "LA_EUROPA", "77", ["no_paso_google_maps", "pasajero_violento"], 347.2667),
+  makeReport(42, "LA_CAMPINA", null, ["hacinados", "olia_mal_sucio"], 357.2),
+  makeReport(43, "SAN_RAMON", null, ["conduccion_temeraria", "cucarachas"], 358.3667),
+  makeReport(44, "GRANADILLA", "BUS217", ["no_hizo_parada", "paro_otro_lado"], 360.6667),
+  makeReport(45, "SAN_RAMON", "BUS217", ["insegura_parada"], 361.1667),
+  makeReport(46, "LA_EUROPA", "CR4521", ["duro_toda_la_vida", "insegura_parada"], 384.6333),
+  makeReport(47, "LA_CAMPINA", "84", ["chofer_trato_mal", "volumen_molesto"], 385.4),
+  makeReport(48, "LA_EUROPA", "18", ["paro_otro_lado"], 409.4667),
+  makeReport(49, "VARGAS_ARAYA", "62", ["no_horario_claro"], 411.4),
+  makeReport(50, "SAN_RAMON", "91", ["hacinados"], 416.9833),
+  makeReport(51, "CEDROS", "84", ["conduccion_temeraria", "chofer_trato_mal"], 424.25),
+  makeReport(52, "SAN_RAMON", "62", ["insegura_parada", "olia_mal_sucio"], 425.25),
+  makeReport(53, "GRANADILLA", null, ["no_paso_google_maps", "pasajero_violento"], 426.1167),
+  makeReport(54, "SABANILLA", null, ["insegura_parada", "volumen_molesto"], 432.2167),
+  makeReport(55, "LA_EUROPA", "58", ["pasajero_violento"], 436.8),
+  makeReport(56, "VARGAS_ARAYA", "SJ0912", ["paro_otro_lado"], 438.5333),
+  makeReport(57, "SALITRILLOS", null, ["pasajero_violento"], 450.8667),
+  makeReport(58, "LA_EUROPA", "18", ["olia_mal_sucio"], 463.8667),
+  makeReport(59, "CEDROS", "CR4521", ["horario_sin_servicio", "conduccion_temeraria"], 468.6833),
+  makeReport(60, "SAN_RAMON", null, ["horario_sin_servicio", "conduccion_temeraria"], 474.1333),
+  makeReport(61, "SABANILLA", null, ["pasajero_sin_audifonos"], 474.5833),
+  makeReport(62, "SAN_RAMON", null, ["no_horario_claro", "pasajero_violento", "conduccion_temeraria"], 477.3333),
+  makeReport(63, "LA_CAMPINA", "18", ["no_hizo_parada"], 484.0833),
+  makeReport(64, "LA_CAMPINA", null, ["no_hizo_parada", "cucarachas", "olia_mal_sucio"], 499.2333),
+  makeReport(65, "SABANILLA", "41", ["pasajero_violento"], 502.1167),
+  makeReport(66, "CEDROS", "77", ["cucarachas", "volumen_molesto"], 503.7667),
+  makeReport(67, "SAN_RAMON", "SPB045", ["pasajero_violento", "hacinados"], 507.7),
+  makeReport(68, "LA_EUROPA", "TCR889", ["no_hizo_parada", "cucarachas"], 512.8),
+  makeReport(69, "LA_CAMPINA", "SJB123", ["paro_otro_lado"], 530.7833),
+  makeReport(70, "LA_EUROPA", "SPB045", ["olia_mal_sucio", "volumen_molesto"], 533.3),
+  makeReport(71, "LA_EUROPA", "12", ["hacinados"], 534.7),
+  makeReport(72, "GRANADILLA", "SPB045", ["pasajero_violento"], 546.3),
+  makeReport(73, "VARGAS_ARAYA", null, ["no_paso_google_maps"], 552.85),
+  makeReport(74, "SALITRILLOS", "TCR889", ["horario_sin_servicio", "olia_mal_sucio"], 571.0333),
+  makeReport(75, "SAN_RAMON", null, ["cucarachas"], 572.1),
+  makeReport(76, "SABANILLA", "51", ["horario_sin_servicio", "no_hizo_parada"], 573.85),
+  makeReport(77, "SABANILLA", null, ["no_hizo_parada", "paro_otro_lado"], 580.3167),
+  makeReport(78, "CEDROS", null, ["duro_toda_la_vida", "hacinados"], 588.3333),
+  makeReport(79, "LA_CAMPINA", "77", ["no_paso_google_maps", "pasajero_sin_audifonos"], 591.3667),
+  makeReport(80, "SALITRILLOS", "91", ["olia_mal_sucio"], 592.2167),
+  makeReport(81, "SAN_RAMON", null, ["no_horario_claro", "pasajero_sin_audifonos"], 594.65),
+  makeReport(82, "SAN_RAMON", null, ["cucarachas"], 597.9833),
+  makeReport(83, "SAN_RAMON", null, ["olia_mal_sucio"], 611.6833),
+  makeReport(84, "BARRIO_PINTO", "58", ["conduccion_temeraria"], 614.2667),
+  makeReport(85, "GRANADILLA", null, ["paro_otro_lado", "chofer_trato_mal"], 627.0833),
+  makeReport(86, "VARGAS_ARAYA", null, ["conduccion_temeraria", "pasajero_sin_audifonos"], 650.1333),
+  makeReport(87, "SAN_RAMON", "SJ0912", ["acoso", "hacinados"], 660.3),
+  makeReport(88, "CEDROS", null, ["no_hizo_parada"], 661.9667),
+  makeReport(89, "SABANILLA", "77", ["volumen_molesto"], 665.2667),
+  makeReport(90, "BARRIO_PINTO", null, ["paro_otro_lado", "olia_mal_sucio", "pasajero_sin_audifonos"], 669.4),
+  makeReport(91, "SAN_RAMON", null, ["pasajero_violento"], 671.55),
+  makeReport(92, "SALITRILLOS", "33", ["acoso", "cucarachas"], 677.65),
+  makeReport(93, "LA_CAMPINA", "99", ["horario_sin_servicio", "volumen_molesto"], 679.0833),
+  makeReport(94, "BARRIO_PINTO", "18", ["no_paso_google_maps", "no_hizo_parada"], 710.6833),
 ];

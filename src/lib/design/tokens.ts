@@ -15,6 +15,17 @@ export const CHART_TOKENS = {
   tooltipPayloadLimit: 8,
 } as const;
 
+export const CATEGORY_COLORS = {
+  fiabilidad: "oklch(0.55 0.18 255)",
+  paradas: "oklch(0.62 0.14 180)",
+  seguridad: "oklch(0.55 0.20 15)",
+  condicion: "oklch(0.68 0.15 85)",
+  convivencia: "oklch(0.55 0.17 320)",
+} as const;
+
+// Repurposed from a since-removed train-series chart. `CATEGORY_COLORS` above is the
+// intended replacement for problem-category charts; this stays exported because
+// dashboard-charts.tsx (out of scope for this change) still imports it directly.
 export const SERIES_CHART_COLORS = [
   "oklch(0.58 0.16 22)",
   "oklch(0.64 0.15 58)",
@@ -43,19 +54,10 @@ export const SOCIAL_IMAGE_TOKENS = {
   muted: "#5e6a63",
   border: "#dcd8cf",
   primary: "#008b5f",
-  metroRed: "#d6232a",
-  metroBlue: "#2464b4",
-  heatFresco: "#3b92d1",
-  heatCalor: "#d99100",
-  heatInfierno: "#cf3a24",
+  accent: "#d99100",
+  categoryFiabilidad: "#3d5da8",
+  categorySeguridad: "#c23b2e",
   logoContainerPx: 64,
-  logoMarkPx: 50,
-  logoStemWidthPx: 14,
-  logoBulbPx: 28,
-  logoBulbBorderPx: 4,
-  logoHighlightWidthPx: 4,
-  logoHighlightHeightPx: 22,
-  logoHighlightOpacity: 0.75,
   logoGapPx: 20,
   headerTitlePx: 30,
   headerTextPx: 20,
@@ -63,9 +65,9 @@ export const SOCIAL_IMAGE_TOKENS = {
   navMenuPx: 44,
   navMenuLineWidthPx: 24,
   navMenuLineHeightPx: 3,
-  trainWidthPx: 330,
-  trainHeightPx: 100,
-  trainOpacity: 0.28,
+  busWidthPx: 330,
+  busHeightPx: 100,
+  busOpacity: 0.28,
   actionPaddingBlockPx: 10,
   actionPaddingInlinePx: 24,
   actionRowWidthPx: 780,
@@ -86,6 +88,5 @@ export const SOCIAL_IMAGE_TOKENS = {
   stackGapPx: 8,
   textMaxWidthPx: 940,
   logoBorderPx: 2,
-  markRotationDeg: 45,
   descriptionLineHeight: 1.22,
 } as const;

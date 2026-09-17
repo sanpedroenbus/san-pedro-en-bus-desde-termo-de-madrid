@@ -1,63 +1,53 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function openPopover(page: Page, buttonName: string, title: string) {
-  const dialog = page.locator(".centered-popover", { hasText: title });
+const VIEWPORTS = {
+  mobile: { width: 375, height: 812 },
+  desktop: { width: 1440, height: 900 },
+} as const;
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.getByRole("button", { name: buttonName }).click();
-    if (await dialog.isVisible().catch(() => false)) return dialog;
-    await page.waitForTimeout(250);
-  }
-
-  await expect(dialog).toBeVisible();
-  return dialog;
+async function setTheme(page: Page, theme: "light" | "dark") {
+  await page.getByRole("button", { name: "Menú" }).click();
+  await page.getByTestId("theme-toggle").getByRole("button", { name: theme === "dark" ? "Oscuro" : "Claro" }).click();
+  await page.getByRole("button", { name: "Cerrar menú" }).click();
 }
 
-test("captures primary surfaces", async ({ page }, testInfo) => {
-  const project = testInfo.project.name;
-  const consoleErrors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error" || message.type() === "warning") {
-      consoleErrors.push(`${message.type()}: ${message.text()}`);
-    }
-  });
-  page.on("pageerror", (error) => consoleErrors.push(`pageerror: ${error.message}`));
+for (const [viewportName, viewport] of Object.entries(VIEWPORTS)) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`captures primary surfaces (${viewportName}, ${theme})`, async ({ page }) => {
+      await page.setViewportSize(viewport);
 
-  await page.goto("/es");
-  await expect(page.getByText("Termo de Madrid").first()).toBeVisible();
-  await page.screenshot({ fullPage: true, path: `/tmp/termo-${project}-home.png` });
+      const consoleIssues: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error" || message.type() === "warning") {
+          consoleIssues.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on("pageerror", (error) => consoleIssues.push(`pageerror: ${error.message}`));
 
-  await page.goto("/es/reportar");
-  await expect(page.getByRole("heading", { name: "Reportar" })).toBeVisible();
-  await page.screenshot({ fullPage: true, path: `/tmp/termo-${project}-reportar.png` });
-  await page.getByTestId("submit-report").click();
-  const missingCarDialog = page.getByRole("dialog", { name: "¿Seguro que quieres enviar un reporte sin número de coche?" });
-  await expect(missingCarDialog).toBeVisible();
-  await page.screenshot({ fullPage: false, path: `/tmp/termo-${project}-missing-car-dialog.png` });
-  await missingCarDialog.getByRole("button", { name: "Añadir coche" }).click();
+      await page.goto("/es");
+      await expect(page.getByText("San Pedro en Bus").first()).toBeVisible();
+      await setTheme(page, theme);
+      await page.screenshot({ fullPage: true, path: `/tmp/sanpedroenbus-${viewportName}-${theme}-home.png` });
 
-  await page.goto("/es/explorar");
-  await expect(page.getByText("Evolución de cada línea")).toBeVisible();
-  await expect(page.getByTestId("car-explorer-chart")).toBeVisible();
-  await page.screenshot({ fullPage: true, path: `/tmp/termo-${project}-explorar.png` });
+      await page.goto("/es/reportar");
+      await expect(page.getByRole("heading", { name: "Reportar" })).toBeVisible();
+      await page.screenshot({ fullPage: true, path: `/tmp/sanpedroenbus-${viewportName}-${theme}-reportar.png` });
 
-  await page.goto("/es/metodologia");
-  await expect(page.getByRole("heading", { name: "Misión y Metodología" })).toBeVisible();
-  await openPopover(page, "Secciones", "Ir a sección");
-  await page.getByRole("link", { name: "Indicador Termo" }).click();
-  await expect(page.getByText("indicador_termo =")).toBeVisible();
-  await page.goto("/es/metodologia");
-  await expect(page.getByText("Valores actuales usados por línea")).toBeVisible();
-  await page.screenshot({ fullPage: true, path: `/tmp/termo-${project}-metodologia.png` });
+      await page.getByRole("button", { name: "Íbamos hacinados" }).click();
+      await page.getByTestId("submit-report").click();
+      const missingUnitDialog = page.getByRole("dialog", {
+        name: "¿Seguro que querés enviar un reporte sin número de unidad o placa?",
+      });
+      await expect(missingUnitDialog).toBeVisible();
+      await page.screenshot({ fullPage: false, path: `/tmp/sanpedroenbus-${viewportName}-${theme}-missing-unit-dialog.png` });
+      await missingUnitDialog.getByRole("button", { name: "Añadir número de unidad" }).click();
 
-  await page.goto("/es/explorar");
-  await expect(page.getByText("Evolución de cada línea")).toBeVisible();
-  await openPopover(page, "Filtros", "Filtrar exploración");
-  await page.screenshot({ fullPage: false, path: `/tmp/termo-${project}-filters.png` });
-  await page.getByLabel("Cerrar menú").click();
+      await page.goto("/es/explorar");
+      await expect(page.getByRole("heading", { name: "Reportes por ruta", exact: true })).toBeVisible();
+      await expect(page.getByTestId("unit-explorer-chart")).toBeVisible();
+      await page.screenshot({ fullPage: true, path: `/tmp/sanpedroenbus-${viewportName}-${theme}-explorar.png` });
 
-  await openPopover(page, "Gráficas", "Ir a módulo");
-  await page.screenshot({ fullPage: false, path: `/tmp/termo-${project}-shortcuts.png` });
-
-  expect(consoleErrors).toEqual([]);
-});
+      expect(consoleIssues).toEqual([]);
+    });
+  }
+}

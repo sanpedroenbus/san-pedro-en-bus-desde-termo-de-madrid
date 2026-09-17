@@ -2,7 +2,8 @@ import type { Locale } from "./config";
 import { APP_TIME_ZONE } from "@/lib/domain/time";
 
 export function getIntlLocale(locale: Locale) {
-  return locale === "en" ? "en-GB" : "es-ES";
+  void locale;
+  return "es-CR";
 }
 
 export function formatReportTime(date: Date, locale: Locale) {
@@ -27,9 +28,10 @@ export function formatNumber(value: number, locale: Locale, options: Intl.Number
 }
 
 export function formatRelativeReportAge(date: Date | null, locale: Locale, emptyLabel: string, now = new Date()) {
+  void locale;
   if (!date) return emptyLabel;
   const minutes = Math.max(0, Math.round((now.getTime() - date.getTime()) / 60_000));
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.round(minutes / 60);
-  return locale === "en" ? `${hours}h` : `${hours}h`;
+  return `${hours}h`;
 }

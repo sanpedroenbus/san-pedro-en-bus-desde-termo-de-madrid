@@ -1,20 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { parseDashboardRange, parseSelectedCarSeries, parseSelectedLines } from "./dashboard-query";
+import { parseDashboardRange, parseSelectedRoutes } from "./dashboard-query";
 
 describe("dashboard query parsing", () => {
-  it("normalizes and deduplicates supported filters", () => {
-    expect(parseDashboardRange("month")).toBe("month");
-    expect(parseSelectedLines("L5,L1,L5,invalid")).toEqual(["L5", "L1"]);
-    expect(parseSelectedCarSeries("3000,1000,3000,3500,100000,-1,nope")).toEqual([3000, 1000]);
+  it("passes through supported range values", () => {
+    expect(parseDashboardRange("today")).toBe("today");
+    expect(parseDashboardRange("sevenDays")).toBe("sevenDays");
+    expect(parseDashboardRange("thirtyDays")).toBe("thirtyDays");
+    expect(parseDashboardRange("all")).toBe("all");
   });
 
-  it("uses the summer range for invalid public filters", () => {
-    expect(parseDashboardRange("last24Hours")).toBe("summer");
+  it("falls back to 'all' by default for missing or invalid range values", () => {
+    expect(parseDashboardRange(null)).toBe("all");
+    expect(parseDashboardRange(undefined)).toBe("all");
+    expect(parseDashboardRange("summer")).toBe("all");
+    expect(parseDashboardRange("last24Hours")).toBe("all");
   });
 
-  it("bounds the number of cacheable car-series filters", () => {
-    const series = Array.from({ length: 30 }, (_, index) => index * 1000).join(",");
+  it("accepts a caller-supplied fallback range", () => {
+    expect(parseDashboardRange("invalid", "sevenDays")).toBe("sevenDays");
+  });
 
-    expect(parseSelectedCarSeries(series)).toHaveLength(20);
+  it("parses and deduplicates a comma-separated list of valid routes", () => {
+    expect(parseSelectedRoutes("CEDROS,SABANILLA,CEDROS")).toEqual(["CEDROS", "SABANILLA"]);
+  });
+
+  it("drops unknown route ids while keeping the rest", () => {
+    expect(parseSelectedRoutes("CEDROS,L1,SABANILLA,invalid")).toEqual(["CEDROS", "SABANILLA"]);
+  });
+
+  it("returns an empty array for missing or empty input", () => {
+    expect(parseSelectedRoutes(null)).toEqual([]);
+    expect(parseSelectedRoutes(undefined)).toEqual([]);
+    expect(parseSelectedRoutes("")).toEqual([]);
   });
 });

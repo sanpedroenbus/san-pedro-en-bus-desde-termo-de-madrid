@@ -1,262 +1,345 @@
 import { describe, expect, it } from "vitest";
-import { buildCarExplorerSelection, buildDashboardData, getHeatEvolutionScore } from "./dashboard";
-import { METRO_LINES, type MetroLine } from "./lines";
+import {
+  buildDashboardBuckets,
+  buildDashboardData,
+  buildRouteProblemBreakdown,
+  buildUnitExplorerSelection,
+} from "./dashboard";
+import { ROUTES } from "./routes";
 import type { Report } from "./reports";
 
 const now = new Date("2026-07-05T12:00:00Z");
 
-function report(partial: Partial<Report> & Pick<Report, "id" | "line" | "state">): Report {
+function report(partial: Partial<Report> & Pick<Report, "id" | "route" | "problems">): Report {
   return {
-    car: null,
+    unit: null,
     createdAt: now,
     hiddenAt: null,
     ...partial,
   };
 }
 
-describe("dashboard data", () => {
-  it("ranks hot lines and keeps recent reports", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", car: "M1001" }),
-      report({ id: "2", line: "L1", state: "calor", car: "M1001" }),
-      report({ id: "3", line: "L2", state: "fresco" }),
-    ], now);
+describe("buildDashboardData", () => {
+  it("returns empty, zeroed aggregates for no reports rather than crashing or producing NaN", () => {
+    const data = buildDashboardData([], now, "sevenDays");
 
-    expect(data.lineSummaries[0].line).toBe("L1");
-    expect(data.worstCars[0].car).toBe("M1001");
-    expect(data.recentReports).toHaveLength(3);
+    expect(data.routeSummaries).toHaveLength(ROUTES.length);
+    for (const summary of data.routeSummaries) {
+      expect(summary.reports).toBe(0);
+      expect(summary.unitsReported).toBe(0);
+      expect(summary.latestReportAt).toBeNull();
+      expect(Number.isNaN(summary.reports)).toBe(false);
+    }
+
+    expect(data.problemSummaries.every((summary) => summary.reports === 0)).toBe(true);
+    expect(data.categorySummaries.every((summary) => summary.reports === 0)).toBe(true);
+    expect(data.trend.every((point) => point.reports === 0)).toBe(true);
+    expect(data.unitExplorer.options).toEqual([]);
+    expect(data.recentReports).toEqual([]);
+    expect(data.reportsLastDay).toBe(0);
   });
 
-  it("keeps car explorer options sparse and ordered for the selected range", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", car: "M1001", createdAt: new Date("2026-07-05T08:30:00Z") }),
-      report({ id: "2", line: "L5", state: "calor", car: "M1001", createdAt: new Date("2026-07-05T10:45:00Z") }),
-      report({ id: "3", line: "L2", state: "calor", car: "M2002", createdAt: new Date("2026-07-05T11:00:00Z") }),
-      report({ id: "4", line: "L1", state: "calor", car: "M1001", createdAt: new Date("2026-06-01T11:00:00Z") }),
-    ], now, undefined, "today");
+  it("counts one report per problem without any weighting or scoring", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "CEDROS", problems: ["hacinados"] }),
+        report({ id: "2", route: "CEDROS", problems: ["hacinados"] }),
+        report({ id: "3", route: "CEDROS", problems: ["acoso"] }),
+      ],
+      now,
+      "sevenDays",
+    );
 
-    expect(data.carExplorer.options.map((option) => option.car)).toEqual(["M1001", "M2002"]);
+    const hacinados = data.problemSummaries.find((summary) => summary.problem === "hacinados");
+    const acoso = data.problemSummaries.find((summary) => summary.problem === "acoso");
+    expect(hacinados?.reports).toBe(2);
+    expect(acoso?.reports).toBe(1);
+
+    const cedros = data.routeSummaries.find((summary) => summary.route === "CEDROS");
+    expect(cedros?.reports).toBe(3);
   });
 
-  it("keeps worst car totals aligned with car explorer totals", () => {
+  it("counts a single multi-problem report once per problem, without inflating the route total or reportsLastDay", () => {
+    const data = buildDashboardData(
+      [report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"], createdAt: now })],
+      now,
+      "sevenDays",
+    );
+
+    const cedros = data.routeSummaries.find((summary) => summary.route === "CEDROS");
+    expect(cedros?.reports).toBe(1);
+    expect(data.reportsLastDay).toBe(1);
+
+    for (const problem of ["hacinados", "acoso", "cucarachas"]) {
+      const summary = data.problemSummaries.find((entry) => entry.problem === problem);
+      expect(summary?.reports).toBe(1);
+    }
+    const totalProblemCount = data.problemSummaries.reduce((total, entry) => total + entry.reports, 0);
+    expect(totalProblemCount).toBe(3);
+  });
+
+  it("rolls problem summaries up into category summaries consistently, including the multi-problem case", () => {
+    const data = buildDashboardData(
+      [
+        // hacinados + cucarachas are both "condicion"; acoso is "seguridad".
+        report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"] }),
+        report({ id: "2", route: "SABANILLA", problems: ["olia_mal_sucio"] }),
+      ],
+      now,
+      "sevenDays",
+    );
+
+    const totalProblems = data.problemSummaries.reduce((total, entry) => total + entry.reports, 0);
+    const totalCategories = data.categorySummaries.reduce((total, entry) => total + entry.reports, 0);
+    expect(totalCategories).toBe(totalProblems);
+
+    const condicion = data.categorySummaries.find((entry) => entry.category === "condicion");
+    expect(condicion?.reports).toBe(3); // hacinados + cucarachas + olia_mal_sucio
+    const seguridad = data.categorySummaries.find((entry) => entry.category === "seguridad");
+    expect(seguridad?.reports).toBe(1);
+  });
+
+  it("excludes hidden reports from every aggregate", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: "51" }),
+        report({
+          id: "2",
+          route: "CEDROS",
+          problems: ["acoso"],
+          unit: "52",
+          hiddenAt: new Date("2026-07-05T09:00:00Z"),
+        }),
+      ],
+      now,
+      "sevenDays",
+    );
+
+    const cedros = data.routeSummaries.find((summary) => summary.route === "CEDROS");
+    expect(cedros?.reports).toBe(1);
+    expect(cedros?.unitsReported).toBe(1);
+    expect(data.problemSummaries.find((summary) => summary.problem === "acoso")?.reports).toBe(0);
+    expect(data.unitExplorer.options.find((option) => option.unit === "52")).toBeUndefined();
+    expect(data.recentReports).toHaveLength(1);
+    expect(data.reportsLastDay).toBe(1);
+  });
+
+  it("excludes reports outside the selected range window", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "CEDROS", problems: ["hacinados"], createdAt: now }),
+        report({ id: "2", route: "CEDROS", problems: ["acoso"], createdAt: new Date("2026-01-01T12:00:00Z") }),
+      ],
+      now,
+      "sevenDays",
+    );
+
+    const cedros = data.routeSummaries.find((summary) => summary.route === "CEDROS");
+    expect(cedros?.reports).toBe(1);
+    expect(data.problemSummaries.find((summary) => summary.problem === "acoso")?.reports).toBe(0);
+    expect(data.recentReports).toHaveLength(1);
+  });
+
+  it("counts no-unit reports toward the route total but keeps them out of the unit explorer", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: null }),
+        report({ id: "2", route: "CEDROS", problems: ["acoso"], unit: null }),
+        report({ id: "3", route: "CEDROS", problems: ["cucarachas"], unit: "51" }),
+      ],
+      now,
+      "sevenDays",
+    );
+
+    const cedros = data.routeSummaries.find((summary) => summary.route === "CEDROS");
+    expect(cedros?.reports).toBe(3);
+    expect(cedros?.unitsReported).toBe(1);
+    expect(data.unitExplorer.options).toHaveLength(1);
+    expect(data.unitExplorer.options[0].unit).toBe("51");
+  });
+
+  it("orders route summaries by report count descending, breaking ties by catalogue order", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "SABANILLA", problems: ["hacinados"] }),
+        report({ id: "2", route: "SABANILLA", problems: ["acoso"] }),
+        report({ id: "3", route: "LA_EUROPA", problems: ["acoso"] }),
+      ],
+      now,
+      "sevenDays",
+    );
+
+    expect(data.routeSummaries[0].route).toBe("SABANILLA");
+    expect(data.routeSummaries[0].reports).toBe(2);
+    // All zero-report routes keep ROUTES catalogue order (stable sort), so
+    // ordering is deterministic and charts don't jitter between renders.
+    const zeroReportRoutes = data.routeSummaries.filter((summary) => summary.reports === 0).map((summary) => summary.route);
+    const expectedZeroReportOrder = ROUTES.filter((route) => route !== "SABANILLA" && route !== "LA_EUROPA");
+    expect(zeroReportRoutes).toEqual(expectedZeroReportOrder);
+  });
+
+  it("produces the same ordering across repeated calls given identical input (deterministic, no jitter)", () => {
     const reports = [
-      report({ id: "1", line: "L1", state: "infierno", car: "M1001", createdAt: new Date("2026-07-05T08:30:00Z") }),
-      report({ id: "2", line: "L5", state: "calor", car: "M1001", createdAt: new Date("2026-07-05T10:45:00Z") }),
-      report({ id: "3", line: "L1", state: "fresco", car: "M1001", createdAt: new Date("2026-07-05T11:15:00Z") }),
-      report({ id: "4", line: "L2", state: "infierno", car: "M2002", createdAt: new Date("2026-07-05T11:30:00Z") }),
-    ];
-    const data = buildDashboardData(reports, now, undefined, "today");
-
-    const worstCar = data.worstCars.find((car) => car.car === "M1001");
-    const explorerCar = buildCarExplorerSelection("M1001", reports, now, "today", data.carExplorer.options);
-
-    expect(worstCar?.reports).toBe(2);
-    expect(worstCar?.totalReports).toBe(3);
-    expect(worstCar?.calorReports).toBe(1);
-    expect(worstCar?.infiernoReports).toBe(1);
-    expect(worstCar?.lines).toEqual(["L1", "L5"]);
-    expect(explorerCar?.reports).toBe(worstCar?.totalReports);
-    expect(explorerCar?.calorReports).toBe(worstCar?.calorReports);
-    expect(explorerCar?.infiernoReports).toBe(worstCar?.infiernoReports);
-    expect(explorerCar?.history.reduce((total, point) => total + point.reports, 0)).toBe(worstCar?.totalReports);
-  });
-
-  it("ranks worst cars by hot report count before heat severity and ignores fresh reports", () => {
-    const reports = [
-      ...Array.from({ length: 10 }, (_, index) =>
-        report({ id: `m2168-${index}`, line: "L1", state: "calor", car: "M2168", createdAt: new Date("2026-07-05T08:30:00Z") }),
-      ),
-      ...Array.from({ length: 30 }, (_, index) =>
-        report({ id: `fresh-${index}`, line: "L1", state: "fresco", car: "M9999", createdAt: new Date("2026-07-05T08:30:00Z") }),
-      ),
-      ...Array.from({ length: 8 }, (_, index) =>
-        report({ id: `hot-${index}`, line: "L5", state: "infierno", car: `R20${String(index).padStart(2, "0")}`, createdAt: new Date("2026-07-05T09:30:00Z") }),
-      ),
+      report({ id: "1", route: "CEDROS", problems: ["hacinados"] }),
+      report({ id: "2", route: "SABANILLA", problems: ["acoso"] }),
+      report({ id: "3", route: "CEDROS", problems: ["acoso"] }),
     ];
 
-    const data = buildDashboardData(reports, now, undefined, "today");
+    const first = buildDashboardData(reports, now, "sevenDays");
+    const second = buildDashboardData(reports, now, "sevenDays");
 
-    expect(data.worstCars[0].car).toBe("M2168");
-    expect(data.worstCars[0].reports).toBe(10);
-    expect(data.worstCars.some((car) => car.car === "M9999")).toBe(false);
+    expect(first.routeSummaries.map((s) => s.route)).toEqual(second.routeSummaries.map((s) => s.route));
+    expect(first.problemSummaries.map((s) => s.problem)).toEqual(second.problemSummaries.map((s) => s.problem));
+    expect(first.categorySummaries.map((s) => s.category)).toEqual(second.categorySummaries.map((s) => s.category));
   });
 
-  it("caps recent reports at the latest 25 reports", () => {
-    const reports = Array.from({ length: 105 }, (_, index) =>
+  it("sorts recent reports by most recent first and caps them at the configured limit", () => {
+    const reports = Array.from({ length: 30 }, (_, index) =>
       report({
-        id: String(index),
-        line: "L1",
-        state: "calor",
+        id: `${index}`,
+        route: "CEDROS",
+        problems: ["hacinados"],
         createdAt: new Date(now.getTime() - index * 60_000),
       }),
     );
 
-    const data = buildDashboardData(reports, now);
-
+    const data = buildDashboardData(reports, now, "sevenDays");
     expect(data.recentReports).toHaveLength(25);
     expect(data.recentReports[0].id).toBe("0");
     expect(data.recentReports.at(-1)?.id).toBe("24");
   });
 
-  it("keeps latest reports even when they are before the selected range start", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", createdAt: new Date("2026-06-01T08:30:00Z") }),
-    ], new Date("2026-07-05T14:00:00Z"), undefined, "sevenDays");
+  it("keeps unit explorer routes and counts aligned across multiple routes for the same unit", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: "51" }),
+        report({ id: "2", route: "SABANILLA", problems: ["acoso"], unit: "51" }),
+      ],
+      now,
+      "sevenDays",
+    );
 
-    expect(data.lineSummaries.find((summary) => summary.line === "L1")?.reports).toBe(0);
-    expect(data.recentReports).toHaveLength(1);
+    const option = data.unitExplorer.options.find((entry) => entry.unit === "51");
+    expect(option?.reports).toBe(2);
+    expect(option?.routes).toEqual(["CEDROS", "SABANILLA"]);
   });
 
-  it("excludes hidden reports and counts the last day", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", createdAt: new Date("2026-07-05T11:30:00Z") }),
-      report({ id: "2", line: "L1", state: "infierno", hiddenAt: now }),
-      report({ id: "3", line: "L5", state: "calor", createdAt: new Date("2026-07-04T12:30:00Z") }),
-    ], now);
+  it("breaks unit explorer ties by unit code so ordering stays deterministic", () => {
+    const data = buildDashboardData(
+      [
+        report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: "99" }),
+        report({ id: "2", route: "CEDROS", problems: ["hacinados"], unit: "51" }),
+      ],
+      now,
+      "sevenDays",
+    );
 
-    expect(data.reportsLastDay).toBe(2);
-    expect(data.lineSummaries.find((summary) => summary.line === "L1")?.reports).toBe(1);
+    expect(data.unitExplorer.options.map((option) => option.unit)).toEqual(["51", "99"]);
   });
+});
 
-  it("uses a rolling 24 hour range without resetting at Madrid midnight", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", createdAt: new Date("2026-07-05T11:30:00Z") }),
-      report({ id: "2", line: "L5", state: "calor", createdAt: new Date("2026-07-04T13:00:00Z") }),
-      report({ id: "3", line: "L5", state: "calor", createdAt: new Date("2026-07-04T11:30:00Z") }),
-    ], now, undefined, "last24Hours");
-
-    expect(data.reportsLastDay).toBe(2);
-    expect(data.lineSummaries.find((summary) => summary.line === "L5")?.reports).toBe(1);
-    expect(data.recentReports.map((recentReport) => recentReport.id)).toEqual(["1", "2"]);
-  });
-
-  it("uses hourly buckets for today charts", () => {
-    const data = buildDashboardData([
-      report({ id: "0", line: "L1", state: "calor", createdAt: new Date("2026-07-04T22:30:00Z") }),
-      report({ id: "1", line: "L1", state: "infierno", createdAt: new Date("2026-07-05T08:30:00Z") }),
-      report({ id: "2", line: "L5", state: "calor", createdAt: new Date("2026-07-05T10:45:00Z") }),
-    ], now, undefined, "today");
-
-    expect(data.trend).toHaveLength(24);
-    expect(data.trend[0].label).toBe("00");
-    expect(data.trend.reduce((total, point) => total + point.reports, 0)).toBe(3);
-    expect(data.lineEvolution).toHaveLength(24);
-    expect(data.lineEvolution.reduce((total, point) => total + (point.L1 ?? 0) + (point.L5 ?? 0), 0)).toBe(3);
-  });
-
-  it("uses daily buckets for wider range charts and tracks the busiest lines", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", createdAt: new Date("2026-07-04T08:30:00Z") }),
-      report({ id: "2", line: "L1", state: "calor", createdAt: new Date("2026-07-05T10:45:00Z") }),
-      report({ id: "3", line: "L5", state: "calor", createdAt: new Date("2026-07-05T11:15:00Z") }),
-    ], new Date("2026-07-05T14:00:00Z"), undefined, "sevenDays");
-
-    expect(data.trend).toHaveLength(7);
-    expect(data.trend.reduce((total, point) => total + point.reports, 0)).toBe(3);
-    expect(data.lineEvolution.reduce((total, point) => total + (point.L1 ?? 0), 0)).toBe(2);
-    expect(data.lineEvolution.reduce((total, point) => total + (point.L5 ?? 0), 0)).toBe(1);
-  });
-
-  it("builds total report trend, car series, and worst-hour aggregates", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "fresco", car: null, createdAt: new Date("2026-07-04T08:30:00Z") }),
-      report({ id: "2", line: "L1", state: "calor", car: "R2311", createdAt: new Date("2026-07-05T04:15:00Z") }),
-      report({ id: "3", line: "L5", state: "infierno", car: "M12333", createdAt: new Date("2026-07-05T12:45:00Z") }),
-      report({ id: "4", line: "L5", state: "calor", car: "M12333", createdAt: new Date("2026-07-05T12:59:00Z") }),
-    ], new Date("2026-07-05T14:00:00Z"), undefined, "sevenDays");
-
-    expect(data.totalReportsTrend.reduce((total, point) => total + point.reports, 0)).toBe(4);
-    expect(data.carSeries).toEqual([
-      { series: 2000, label: "2000", reports: 1 },
-      { series: 12000, label: "12000", reports: 2 },
-    ]);
-    expect(data.worstHours[0].label).toBe("5");
-    expect(data.worstHours.at(-1)?.label).toBe("23");
-    expect(data.worstHours.find((point) => point.label === "6")?.reports).toBe(1);
-    expect(data.worstHours.find((point) => point.label === "14")?.reports).toBe(2);
-  });
-
-  it("builds line car report details from all report states", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "fresco", car: "M1001" }),
-      report({ id: "2", line: "L1", state: "calor", car: "M1001" }),
-      report({ id: "3", line: "L1", state: "infierno", car: "M1001" }),
-      report({ id: "4", line: "L1", state: "calor", car: "M2002" }),
-      report({ id: "5", line: "L1", state: "calor", car: null }),
-      report({ id: "6", line: "L1", state: "fresco", car: "M3003" }),
-    ], now, undefined, "today");
-
-    const l1Cars = data.lineCarReports.find((item) => item.line === "L1");
-
-    expect(l1Cars?.totalCars).toBe(3);
-    expect(l1Cars?.cars).toEqual([
-      { car: "M1001", reports: 3, frescoReports: 1, heatReports: 2, calorReports: 1, infiernoReports: 1 },
-      { car: "M2002", reports: 1, frescoReports: 0, heatReports: 1, calorReports: 1, infiernoReports: 0 },
-      { car: "M3003", reports: 1, frescoReports: 1, heatReports: 0, calorReports: 0, infiernoReports: 0 },
-    ]);
-    expect(data.lineSummaries.find((summary) => summary.line === "L1")?.carsWithoutAcReported).toBe(0);
-  });
-
-  it("counts only cars whose heat reports exceed fresh reports by more than two", () => {
-    const data = buildDashboardData([
-      ...Array.from({ length: 3 }, (_, index) => report({ id: `qualifies-${index}`, line: "L1", state: "calor", car: "M1001" })),
-      ...Array.from({ length: 3 }, (_, index) => report({ id: `boundary-hot-${index}`, line: "L1", state: "infierno", car: "M2002" })),
-      report({ id: "boundary-fresh", line: "L1", state: "fresco", car: "M2002" }),
-      ...Array.from({ length: 5 }, (_, index) => report({ id: `conflicted-hot-${index}`, line: "L1", state: "calor", car: "M3003" })),
-      ...Array.from({ length: 2 }, (_, index) => report({ id: `conflicted-fresh-${index}`, line: "L1", state: "fresco", car: "M3003" })),
-      ...Array.from({ length: 4 }, (_, index) => report({ id: `other-line-hot-${index}`, line: "L5", state: "infierno", car: "M2002" })),
-      ...Array.from({ length: 2 }, (_, index) => report({ id: `hidden-${index}`, line: "L1", state: "infierno", car: "M4004", hiddenAt: now })),
-    ], now, undefined, "today");
-
-    expect(data.lineSummaries.find((summary) => summary.line === "L1")?.carsWithoutAcReported).toBe(2);
-    expect(data.lineSummaries.find((summary) => summary.line === "L5")?.carsWithoutAcReported).toBe(1);
-  });
-
-  it("uses accumulated summer reports for the Termo Indicator trend", () => {
-    const estimatedCarsByLine = Object.fromEntries(METRO_LINES.map((line) => [line, 10])) as Record<MetroLine, number>;
+describe("buildRouteProblemBreakdown", () => {
+  it("reports only the given route's problems and excludes hidden reports", () => {
     const reports = [
-      report({ id: "1", line: "L1", state: "infierno", car: "M1001", createdAt: new Date("2026-06-01T08:30:00Z") }),
+      report({ id: "1", route: "CEDROS", problems: ["hacinados"] }),
+      report({ id: "2", route: "CEDROS", problems: ["hacinados"], hiddenAt: new Date("2026-07-05T09:00:00Z") }),
+      report({ id: "3", route: "SABANILLA", problems: ["acoso"] }),
     ];
-    const data = buildDashboardData(reports, now, estimatedCarsByLine, "sevenDays");
-    const monthData = buildDashboardData(reports, now, estimatedCarsByLine, "month");
 
-    const l1Values = data.trend.map((point) => point.L1);
-
-    expect(l1Values).toEqual([0.01, 0.01, 0.01, 0.01, 0.01, 0, 0]);
-    expect(monthData.trend.slice(-7).map((point) => point.L1)).toEqual(l1Values);
+    const breakdown = buildRouteProblemBreakdown("CEDROS", reports);
+    expect(breakdown.route).toBe("CEDROS");
+    expect(breakdown.reports).toBe(1);
+    expect(breakdown.problems.find((p) => p.problem === "hacinados")?.reports).toBe(1);
+    expect(breakdown.problems.find((p) => p.problem === "acoso")?.reports).toBe(0);
   });
 
-  it("scores heat evolution with the cumulative Metro Heat Index", () => {
-    const noAffectedFleetScore = getHeatEvolutionScore([
-      report({ id: "1", line: "L1", state: "fresco", car: "M1001" }),
-    ], 10, now);
-    const singleCarScore = getHeatEvolutionScore([
-      report({ id: "1", line: "L1", state: "calor", car: "M1001" }),
-    ], 10, now);
-    const widerFleetSignalScore = getHeatEvolutionScore([
-      report({ id: "1", line: "L1", state: "calor", car: "M1001" }),
-      report({ id: "2", line: "L1", state: "calor", car: "M1002" }),
-      report({ id: "3", line: "L1", state: "calor", car: "M1003" }),
-    ], 10, now);
-    const fullFleetScore = getHeatEvolutionScore(Array.from({ length: 10 }, (_, index) =>
-      report({ id: String(index), line: "L1", state: "infierno", car: `M10${String(index).padStart(2, "0")}` }),
-    ), 10, now);
+  it("returns a zeroed breakdown for a route with no reports", () => {
+    const breakdown = buildRouteProblemBreakdown("LA_EUROPA", []);
+    expect(breakdown.reports).toBe(0);
+    expect(breakdown.problems.every((p) => p.reports === 0)).toBe(true);
+  });
+});
 
-    expect(noAffectedFleetScore).toBe(0);
-    expect(singleCarScore).toBe(5.22);
-    expect(widerFleetSignalScore).toBeGreaterThan(singleCarScore);
-    expect(fullFleetScore).toBeGreaterThan(widerFleetSignalScore);
-    expect(fullFleetScore).toBeLessThanOrEqual(100);
+describe("buildDashboardBuckets", () => {
+  it("builds 24 hourly buckets for 'today'", () => {
+    const buckets = buildDashboardBuckets(now, "today");
+    expect(buckets).toHaveLength(24);
+    expect(buckets[0].start.toISOString()).toBe("2026-07-05T06:00:00.000Z");
+    expect(buckets[0].end.toISOString()).toBe("2026-07-05T07:00:00.000Z");
   });
 
-  it("excludes reports after the summer window", () => {
-    const data = buildDashboardData([
-      report({ id: "1", line: "L1", state: "infierno", createdAt: new Date("2026-10-15T12:00:00Z") }),
-      report({ id: "2", line: "L5", state: "infierno", createdAt: new Date("2026-11-01T12:00:00Z") }),
-    ], new Date("2026-11-02T12:00:00Z"), undefined, "summer");
+  it("builds one daily bucket per day for 'sevenDays'", () => {
+    const buckets = buildDashboardBuckets(now, "sevenDays");
+    expect(buckets).toHaveLength(7);
+    expect(buckets[0].start.toISOString()).toBe("2026-06-29T06:00:00.000Z");
+    expect(buckets.at(-1)?.end.toISOString()).toBe("2026-07-06T06:00:00.000Z");
+  });
 
-    expect(data.lineSummaries.find((summary) => summary.line === "L1")?.reports).toBe(1);
-    expect(data.lineSummaries.find((summary) => summary.line === "L5")?.reports).toBe(0);
-    expect(data.recentReports).toHaveLength(1);
+  it("builds one daily bucket per day for 'thirtyDays'", () => {
+    const buckets = buildDashboardBuckets(now, "thirtyDays");
+    expect(buckets).toHaveLength(30);
+  });
+});
+
+describe("buildUnitExplorerSelection", () => {
+  it("returns null for a unit with no reports in range", () => {
+    const selection = buildUnitExplorerSelection("999", [], now, "sevenDays");
+    expect(selection).toBeNull();
+  });
+
+  it("builds a per-bucket history for a known unit", () => {
+    const reports = [
+      report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: "51", createdAt: now }),
+      report({
+        id: "2",
+        route: "CEDROS",
+        problems: ["acoso"],
+        unit: "51",
+        createdAt: new Date("2026-07-04T18:00:00Z"),
+      }),
+    ];
+
+    const selection = buildUnitExplorerSelection("51", reports, now, "sevenDays");
+    expect(selection?.unit).toBe("51");
+    expect(selection?.reports).toBe(2);
+    const totalHistoryReports = selection?.history.reduce((total, point) => total + point.reports, 0);
+    expect(totalHistoryReports).toBe(2);
+  });
+
+  // Regression: buildUnitExplorerSelection used to filter by unit only, applying
+  // neither the hiddenAt filter nor the range window, while buildDashboardData
+  // applied both. Both real callers hand it raw report lists, so an undone or
+  // moderated report stayed visible in the unit detail view.
+  it("excludes hidden and out-of-range reports from the unit explorer selection, matching buildDashboardData", () => {
+    const inRangeVisible = report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: "51", createdAt: now });
+    const outOfRange = report({
+      id: "2",
+      route: "CEDROS",
+      problems: ["acoso"],
+      unit: "51",
+      createdAt: new Date("2026-01-01T12:00:00Z"),
+    });
+    const hidden = report({
+      id: "3",
+      route: "CEDROS",
+      problems: ["cucarachas"],
+      unit: "51",
+      createdAt: now,
+      hiddenAt: new Date("2026-07-05T11:00:00Z"),
+    });
+    const allReports = [inRangeVisible, outOfRange, hidden];
+
+    // The dashboard's own unit explorer option correctly reflects only the
+    // visible, in-range report.
+    const dashboard = buildDashboardData(allReports, now, "sevenDays");
+    const dashboardOption = dashboard.unitExplorer.options.find((option) => option.unit === "51");
+    expect(dashboardOption?.reports).toBe(1);
+
+    // buildUnitExplorerSelection must agree, even when handed a raw unfiltered
+    // list the way the repository does: the hidden and out-of-range reports are
+    // excluded, and the hidden report's problem never reaches the history.
+    const selection = buildUnitExplorerSelection("51", allReports, now, "sevenDays");
+    expect(selection?.reports).toBe(1);
+    expect(selection?.history.reduce((total, point) => total + point.reports, 0)).toBe(1);
   });
 });
