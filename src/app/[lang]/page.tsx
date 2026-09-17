@@ -6,8 +6,8 @@ import { ExploreActionIcon, ReportActionIcon } from "@/components/ui/action-icon
 import { Button } from "@/components/ui/button";
 import { getCachedHomeSnapshot } from "@/lib/server/dashboard-cache";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import { isLocale } from "@/lib/i18n/config";
-import { LINE_COLORS, type MetroLine } from "@/lib/domain/lines";
+import { isLocale, type Locale } from "@/lib/i18n/config";
+import { ROUTE_COLORS, type Route } from "@/lib/domain/routes";
 import type { Report } from "@/lib/domain/reports";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -16,6 +16,22 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
   const dictionary = await getDictionary(lang);
+
+  return <HomePageContent dictionary={dictionary} includeDemo={false} lang={lang} />;
+}
+
+// Exported so /demo can render the exact same home page with includeDemo set,
+// instead of duplicating this page's logic.
+export async function HomePageContent({
+  dictionary,
+  lang,
+  includeDemo,
+}: {
+  dictionary: Awaited<ReturnType<typeof getDictionary>>;
+  lang: Locale;
+  includeDemo: boolean;
+}) {
+  const exploreHref = includeDemo ? "/demo/explorar" : `/${lang}/explorar`;
 
   return (
     <main>
@@ -35,7 +51,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
               </Link>
             </Button>
             <Button asChild className="home-explore-action min-h-0 justify-between rounded-md py-1.5 pl-3 pr-6 text-left" data-testid="home-explore" variant="secondary">
-              <Link href={`/${lang}/explorar`}>
+              <Link href={exploreHref}>
                 <span>
                   <span className="block text-base">{dictionary.common.explore}</span>
                   <span className="mt-px block text-xs font-normal text-muted">{dictionary.home.exploreDescription}</span>
@@ -46,7 +62,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           </div>
 
           <Suspense fallback={<HomeReportsSkeleton dictionary={dictionary} />}>
-            <HomeReports dictionary={dictionary} locale={lang} />
+            <HomeReports dictionary={dictionary} includeDemo={includeDemo} locale={lang} />
           </Suspense>
 
           <p className="text-center text-xs text-muted">{dictionary.common.disclaimer}</p>
@@ -56,11 +72,19 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   );
 }
 
-async function HomeReports({ dictionary, locale }: { dictionary: Awaited<ReturnType<typeof getDictionary>>; locale: "es" | "en" }) {
+async function HomeReports({
+  dictionary,
+  locale,
+  includeDemo,
+}: {
+  dictionary: Awaited<ReturnType<typeof getDictionary>>;
+  locale: Locale;
+  includeDemo: boolean;
+}) {
   await connection();
-  const dashboard = await getCachedHomeSnapshot();
+  const dashboard = await getCachedHomeSnapshot(includeDemo);
   const recentReports = dashboard.recentReports;
-  const topRecentLines = getTopRecentLines(recentReports);
+  const topRecentRoutes = getTopRecentRoutes(recentReports);
 
   return (
     <>
@@ -79,22 +103,22 @@ async function HomeReports({ dictionary, locale }: { dictionary: Awaited<ReturnT
       <section className="scroll-mt-24 rounded-md border border-border bg-surface-raised p-4" aria-labelledby="home-recent-title" id="home-recent-reports">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold" id="home-recent-title">
-            {dictionary.explore.modules.recent}
+            {dictionary.home.recentTitle}
           </h2>
           <Clock3 aria-hidden="true" className="size-4 text-muted" />
         </div>
         {recentReports.length > 0 ? (
           <>
             <div className="mt-3 flex items-center gap-x-3 overflow-hidden whitespace-nowrap">
-              {topRecentLines.map(({ line, reports }) => (
+              {topRecentRoutes.map(({ route, reports }) => (
                 <span
                     className="inline-flex items-center font-mono text-xs font-semibold tabular-nums"
-                  key={line}
+                  key={route}
                   style={{
-                    color: LINE_COLORS[line].fill,
+                    color: ROUTE_COLORS[route].fill,
                   }}
                   >
-                    {line}
+                    {route}
                     <span className="mx-0.5 text-muted">·</span>
                     {reports}
                   </span>
@@ -131,7 +155,7 @@ function HomeReportsSkeleton({ dictionary }: { dictionary: Awaited<ReturnType<ty
       <section className="scroll-mt-24 rounded-md border border-border bg-surface-raised p-4" aria-labelledby="home-recent-title" id="home-recent-reports">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold" id="home-recent-title">
-            {dictionary.explore.modules.recent}
+            {dictionary.home.recentTitle}
           </h2>
           <Clock3 aria-hidden="true" className="size-4 text-muted" />
         </div>
@@ -149,13 +173,13 @@ function TrainSilhouette() {
   return <span aria-hidden="true" className="home-train-silhouette mx-auto mb-1 h-16 w-48 text-muted opacity-35" />;
 }
 
-function getTopRecentLines(reports: Report[]) {
-  const counts = new Map<MetroLine, number>();
+function getTopRecentRoutes(reports: Report[]) {
+  const counts = new Map<Route, number>();
   for (const report of reports) {
-    counts.set(report.line, (counts.get(report.line) ?? 0) + 1);
+    counts.set(report.route, (counts.get(report.route) ?? 0) + 1);
   }
 
   return Array.from(counts.entries())
-    .map(([line, count]) => ({ line, reports: count }))
-    .toSorted((a, b) => b.reports - a.reports || a.line.localeCompare(b.line));
+    .map(([route, count]) => ({ route, reports: count }))
+    .toSorted((a, b) => b.reports - a.reports || a.route.localeCompare(b.route));
 }

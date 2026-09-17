@@ -1,30 +1,34 @@
+import "server-only";
 import {
   buildDashboardData,
-  buildCarExplorerSelection,
-  type CarExplorerSelection,
+  buildRouteProblemBreakdown,
+  buildUnitExplorerSelection,
+  type RouteProblemBreakdown,
+  type UnitExplorerSelection,
   type DashboardData,
 } from "@/lib/domain/dashboard";
 import { cache } from "react";
-import { isMetroLine, type MetroLine } from "@/lib/domain/lines";
-import { getRangeWindow, type DashboardRange } from "@/lib/domain/ranges";
+import { isRoute, type Route } from "@/lib/domain/routes";
+import { getRangeWindow, type TimeRange } from "@/lib/domain/ranges";
+import { DEMO_DATA_CUTOFF } from "@/lib/domain/demo";
 import type { Report } from "@/lib/domain/reports";
-import { getMemoryDashboard, getMemoryCarDetail, getSupabase } from "./reports-repository";
+import { getMemoryDashboard, getMemoryRouteDetail, getMemoryUnitDetail, getSupabase } from "./reports-repository";
 
 export type DashboardModuleSearch = {
-  range: DashboardRange;
-  lines: MetroLine[];
-  carSeries?: number[];
+  range: TimeRange;
+  routes: Route[];
+  includeDemo: boolean;
 };
 
-export type LineSummariesModuleData = Pick<DashboardData, "lineSummaries">;
-export type ProblemSummariesModuleData = Pick<DashboardData, "problemSummaries">;
-export type HeatTrendModuleData = Pick<DashboardData, "trend">;
-export type WorstCarsModuleData = { carExplorer: DashboardData["carExplorer"] };
+export type RouteSummariesModuleData = Pick<DashboardData, "routeSummaries">;
+export type ProblemSummariesModuleData = Pick<DashboardData, "problemSummaries" | "categorySummaries">;
+export type TrendModuleData = Pick<DashboardData, "trend">;
+export type UnitExplorerModuleData = { unitExplorer: DashboardData["unitExplorer"] };
 
 type ReportRow = {
   id: string;
-  line: string;
-  car: string | null;
+  route: string;
+  unit: string | null;
   problems: string[] | null;
   created_at: string;
   hidden_at: string | null;
@@ -33,29 +37,31 @@ type ReportRow = {
 const getReportsForSearch = cache(async function getReportsForSearch(search: DashboardModuleSearch, now: Date): Promise<Report[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
-  const summerStart = getRangeWindow("summer", now).start;
   const window = getRangeWindow(search.range, now);
-  const queryStart = summerStart < window.start ? summerStart : window.start;
+  // The live app never shows anything before the demo cutoff, regardless of
+  // the selected range -- this is an additional floor, not a replacement for
+  // the range window.
+  const start = search.includeDemo ? window.start : new Date(Math.max(window.start.getTime(), DEMO_DATA_CUTOFF.getTime()));
 
   let query = supabase
     .from("reports")
-    .select("id,line,car,problems,created_at,hidden_at")
-    .gte("created_at", queryStart.toISOString())
+    .select("id,route,unit,problems,created_at,hidden_at")
+    .gte("created_at", start.toISOString())
     .lte("created_at", window.end.toISOString());
 
-  if (search.lines.length > 0) {
-    query = query.in("line", search.lines);
+  if (search.routes.length > 0) {
+    query = query.in("route", search.routes);
   }
 
   const { data, error } = await query;
   if (error) throw error;
 
   return ((data ?? []) as ReportRow[])
-    .filter((row) => isMetroLine(row.line))
+    .filter((row) => isRoute(row.route))
     .map((row) => ({
       id: row.id,
-      line: row.line as MetroLine,
-      car: row.car,
+      route: row.route as Route,
+      unit: row.unit,
       problems: (row.problems ?? []) as Report["problems"],
       createdAt: new Date(row.created_at),
       hiddenAt: row.hidden_at ? new Date(row.hidden_at) : null,
@@ -65,35 +71,47 @@ const getReportsForSearch = cache(async function getReportsForSearch(search: Das
 async function getDashboardForSearch(search: DashboardModuleSearch, now: Date): Promise<DashboardData> {
   const reports = await getReportsForSearch(search, now);
   if (reports) {
-    return buildDashboardData(reports, now, {} as Record<MetroLine, number>, search.range);
+    return buildDashboardData(reports, now, search.range);
   }
-  return getMemoryDashboard({ range: search.range, lines: search.lines.length ? search.lines : null, carSeries: search.carSeries, now });
+  return getMemoryDashboard({ range: search.range, routes: search.routes, includeDemo: search.includeDemo, now });
 }
 
-export async function getLineSummariesModule(search: DashboardModuleSearch, now = new Date()): Promise<LineSummariesModuleData> {
+export async function getRouteSummariesModule(search: DashboardModuleSearch, now = new Date()): Promise<RouteSummariesModuleData> {
   const dashboard = await getDashboardForSearch(search, now);
-  return { lineSummaries: dashboard.lineSummaries };
+  return { routeSummaries: dashboard.routeSummaries };
 }
 
 export async function getProblemSummariesModule(search: DashboardModuleSearch, now = new Date()): Promise<ProblemSummariesModuleData> {
   const dashboard = await getDashboardForSearch(search, now);
-  return { problemSummaries: dashboard.problemSummaries };
+  return { problemSummaries: dashboard.problemSummaries, categorySummaries: dashboard.categorySummaries };
 }
 
-export async function getHeatTrendModule(search: DashboardModuleSearch, now = new Date()): Promise<HeatTrendModuleData> {
+export async function getTrendModule(search: DashboardModuleSearch, now = new Date()): Promise<TrendModuleData> {
   const dashboard = await getDashboardForSearch(search, now);
   return { trend: dashboard.trend };
 }
 
-export async function getWorstCarsModule(search: DashboardModuleSearch, now = new Date()): Promise<WorstCarsModuleData> {
+export async function getUnitExplorerModule(search: DashboardModuleSearch, now = new Date()): Promise<UnitExplorerModuleData> {
   const dashboard = await getDashboardForSearch(search, now);
-  return { carExplorer: dashboard.carExplorer };
+  return { unitExplorer: dashboard.unitExplorer };
 }
 
-export async function getCarDetailModule(search: DashboardModuleSearch, car: string, now = new Date()): Promise<CarExplorerSelection | null> {
+export async function getUnitDetailModule(search: DashboardModuleSearch, unit: string, now = new Date()): Promise<UnitExplorerSelection | null> {
   const reports = await getReportsForSearch(search, now);
   if (reports) {
-    return buildCarExplorerSelection(car, reports, now, search.range);
+    return buildUnitExplorerSelection(unit, reports, now, search.range);
   }
-  return getMemoryCarDetail({ range: search.range, lines: search.lines, carSeries: search.carSeries, car, now });
+  return getMemoryUnitDetail({ range: search.range, routes: search.routes, includeDemo: search.includeDemo, unit, now });
+}
+
+// getReportsForSearch already scopes its Supabase query to the range window,
+// so it's safe to hand its result straight to buildRouteProblemBreakdown
+// (which only strips hidden reports, not the range). The memory fallback has
+// no such query-level window, so getMemoryRouteDetail applies it itself.
+export async function getRouteDetailModule(search: DashboardModuleSearch, route: Route, now = new Date()): Promise<RouteProblemBreakdown> {
+  const reports = await getReportsForSearch(search, now);
+  if (reports) {
+    return buildRouteProblemBreakdown(route, reports);
+  }
+  return getMemoryRouteDetail({ range: search.range, routes: search.routes, includeDemo: search.includeDemo, route, now });
 }

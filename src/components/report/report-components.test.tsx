@@ -1,175 +1,178 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { messages as esMessages } from "../../lib/i18n/messages/es";
-import { HeatSelector } from "./heat-selector";
-import { LinePicker } from "./line-picker";
+import { PROBLEM_CATEGORIES, PROBLEM_CATEGORY, PROBLEMS } from "@/lib/domain/problems";
+import { ROUTE_LABELS, ROUTES } from "@/lib/domain/routes";
+import type { Report } from "@/lib/domain/reports";
+import { messages as esMessages } from "@/lib/i18n/messages/es";
+import { getProblemLabel } from "./problem-label";
+import { ProblemSelector } from "./problem-selector";
+import { RecentReportRow } from "./recent-report-row";
 import { ReportForm } from "./report-form";
+import { RoutePicker } from "./route-picker";
 
 const push = vi.fn();
-const toastMock = vi.hoisted(() =>
-  Object.assign(vi.fn(), {
-    success: vi.fn(),
-  }),
-);
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
 
-vi.mock("sonner", () => ({
-  toast: toastMock,
-}));
+describe("RoutePicker", () => {
+  it("renders every route and marks the selected one as pressed", () => {
+    render(<RoutePicker label="Ruta" onChange={vi.fn()} value={ROUTES[0]} />);
 
-describe("report controls", () => {
+    for (const route of ROUTES) {
+      expect(screen.getByRole("button", { name: ROUTE_LABELS[route] })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: ROUTE_LABELS[ROUTES[0]] })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: ROUTE_LABELS[ROUTES[1]] })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("calls onChange with the clicked route", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RoutePicker label="Ruta" onChange={onChange} value={ROUTES[0]} />);
+
+    await user.click(screen.getByRole("button", { name: ROUTE_LABELS[ROUTES[2]] }));
+
+    expect(onChange).toHaveBeenCalledWith(ROUTES[2]);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ProblemSelector", () => {
+  it("renders all 16 problems across their 5 categories regardless of which are selected", () => {
+    render(<ProblemSelector dictionary={esMessages} label="¿Qué pasó?" onChange={vi.fn()} value={[]} />);
+
+    for (const category of PROBLEM_CATEGORIES) {
+      expect(screen.getByText(esMessages.problemCategories[category])).toBeInTheDocument();
+    }
+    for (const problem of PROBLEMS) {
+      expect(screen.getByRole("button", { name: getProblemLabel(esMessages, problem) })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole("button")).toHaveLength(PROBLEMS.length);
+  });
+
+  it("groups each problem under its declared category", () => {
+    render(<ProblemSelector dictionary={esMessages} label="¿Qué pasó?" onChange={vi.fn()} value={[]} />);
+
+    for (const category of PROBLEM_CATEGORIES) {
+      const legend = screen.getByText(esMessages.problemCategories[category]);
+      const group = legend.closest("fieldset");
+      expect(group).not.toBeNull();
+      const problemsInCategory = PROBLEMS.filter((problem) => PROBLEM_CATEGORY[problem] === category);
+      for (const problem of problemsInCategory) {
+        expect(within(group as HTMLElement).getByRole("button", { name: getProblemLabel(esMessages, problem) })).toBeInTheDocument();
+      }
+    }
+  });
+
+  it("supports multi-select: adds and removes problems independently", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const first = PROBLEMS[0];
+    const second = PROBLEMS[1];
+
+    const { rerender } = render(<ProblemSelector dictionary={esMessages} label="¿Qué pasó?" onChange={onChange} value={[]} />);
+
+    await user.click(screen.getByRole("button", { name: getProblemLabel(esMessages, first) }));
+    expect(onChange).toHaveBeenLastCalledWith([first]);
+
+    rerender(<ProblemSelector dictionary={esMessages} label="¿Qué pasó?" onChange={onChange} value={[first]} />);
+    await user.click(screen.getByRole("button", { name: getProblemLabel(esMessages, second) }));
+    expect(onChange).toHaveBeenLastCalledWith([first, second]);
+
+    rerender(<ProblemSelector dictionary={esMessages} label="¿Qué pasó?" onChange={onChange} value={[first, second]} />);
+    expect(screen.getByRole("button", { name: getProblemLabel(esMessages, first) })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: getProblemLabel(esMessages, first) }));
+    expect(onChange).toHaveBeenLastCalledWith([second]);
+  });
+});
+
+describe("RecentReportRow", () => {
+  function report(partial: Partial<Report>): Report {
+    return {
+      id: "report-1",
+      route: "CEDROS",
+      unit: null,
+      problems: ["hacinados"],
+      createdAt: new Date("2026-07-05T12:00:00Z"),
+      hiddenAt: null,
+      ...partial,
+    };
+  }
+
+  it("shows the route, the unit code, and problem chips instead of a heat-state badge", () => {
+    render(<RecentReportRow dictionary={esMessages} locale="es" report={report({ unit: "51", problems: ["hacinados", "cucarachas"] })} />);
+
+    expect(screen.getByText("CEDROS")).toBeInTheDocument();
+    expect(screen.getByText("51")).toBeInTheDocument();
+    expect(screen.getByText(getProblemLabel(esMessages, "hacinados"))).toBeInTheDocument();
+    expect(screen.getByText(getProblemLabel(esMessages, "cucarachas"))).toBeInTheDocument();
+    expect(screen.queryByText(/fresco|calor|infierno/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the no-unit copy when the report has no unit", () => {
+    render(<RecentReportRow dictionary={esMessages} locale="es" report={report({ unit: null })} />);
+    expect(screen.getByText(esMessages.explore.noUnit)).toBeInTheDocument();
+  });
+
+  it("truncates to two visible problem chips and shows a +N overflow badge for the rest", () => {
+    render(
+      <RecentReportRow
+        dictionary={esMessages}
+        locale="es"
+        report={report({ problems: ["hacinados", "cucarachas", "acoso"] })}
+      />,
+    );
+
+    expect(screen.getByText(getProblemLabel(esMessages, "hacinados"))).toBeInTheDocument();
+    expect(screen.getByText(getProblemLabel(esMessages, "cucarachas"))).toBeInTheDocument();
+    expect(screen.queryByText(getProblemLabel(esMessages, "acoso"))).not.toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
+  });
+});
+
+describe("ReportForm", () => {
   beforeEach(() => {
     push.mockReset();
-    toastMock.mockReset();
-    toastMock.success.mockReset();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        json: () => Promise.resolve({ suggestions: ["M2001"] }),
-      }),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ json: () => Promise.resolve({ ok: true }) }));
   });
 
-  it("marks the selected line and changes selection", async () => {
+  it("shows the missing-problems reminder and keeps submission disabled until a problem is selected", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    render(<LinePicker label={esMessages.reportForm.line} onChange={onChange} value="L1" />);
-
-    expect(screen.getByRole("button", { name: "L1" })).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "L5" }));
-    expect(onChange).toHaveBeenCalledWith("L5");
-  });
-
-  it("keeps heat states equal until selected and shows selected copy", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    render(<HeatSelector dictionary={esMessages} label={esMessages.reportForm.heatState} onChange={onChange} value="calor" />);
-
-    expect(screen.getByRole("button", { name: "Calor" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(esMessages.states.calor.description)).toBeVisible();
-    await user.click(screen.getByTestId("heat-infierno"));
-    expect(onChange).toHaveBeenCalledWith("infierno");
-  });
-
-  it("disables report submission for invalid car codes", async () => {
-    const user = userEvent.setup();
-
     render(<ReportForm dictionary={esMessages} locale="es" />);
 
-    await user.type(screen.getByPlaceholderText(esMessages.reportForm.carPlaceholder), "Z1234");
-
-    expect(screen.getByText(/Usa M, R o S/)).toBeVisible();
+    expect(screen.getByText(esMessages.reportForm.invalid)).toBeInTheDocument();
     expect(screen.getByTestId("submit-report")).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: getProblemLabel(esMessages, PROBLEMS[0]) }));
+
+    expect(screen.getByTestId("submit-report")).toBeEnabled();
   });
 
-  it("blocks retired series 1000 with the dedicated message", async () => {
-    const user = userEvent.setup();
-
-    render(<ReportForm dictionary={esMessages} locale="es" />);
-
-    await user.type(screen.getByPlaceholderText(esMessages.reportForm.carPlaceholder), "M1234");
-
-    expect(screen.getByText("La serie 1000 ya no está en circulación")).toBeVisible();
-    expect(screen.getByTestId("submit-report")).toBeDisabled();
-  });
-
-  it("submits normalized car codes", async () => {
-    const user = userEvent.setup();
-    const fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ suggestions: ["M2001"] }),
-      })
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ ok: true, report: { id: "report-1" }, undoToken: "undo-1" }),
-      });
-    vi.stubGlobal("fetch", fetch);
-
-    render(<ReportForm dictionary={esMessages} locale="es" />);
-
-    await user.type(screen.getByPlaceholderText(esMessages.reportForm.carPlaceholder), "m-2234");
-    await user.click(screen.getByTestId("submit-report"));
-
-    expect(fetch).toHaveBeenLastCalledWith(
-      "/api/reports",
-      expect.objectContaining({
-        body: JSON.stringify({ line: "L1", state: "calor", car: "M2234" }),
-      }),
-    );
-    expect(toastMock.success).toHaveBeenCalledWith(esMessages.reportForm.success, expect.any(Object));
-  });
-
-  it("asks for confirmation before submitting without a car and returns focus to the field", async () => {
+  it("asks for confirmation before submitting a report without a unit, then submits with unit: null on confirm", async () => {
     const user = userEvent.setup();
     const fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ suggestions: ["M2001"] }),
+      json: () => Promise.resolve({ ok: true, report: { id: "report-1" }, undoToken: "undo-1" }),
     });
     vi.stubGlobal("fetch", fetch);
 
     render(<ReportForm dictionary={esMessages} locale="es" />);
-
-    expect(screen.queryByText(esMessages.common.optional)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: getProblemLabel(esMessages, PROBLEMS[0]) }));
     await user.click(screen.getByTestId("submit-report"));
 
-    expect(screen.getByRole("dialog", { name: esMessages.reportForm.missingCar.title })).toBeVisible();
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog", { name: esMessages.reportForm.missingUnit.title })).toBeVisible();
+    expect(fetch).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: esMessages.reportForm.missingCar.addCar }));
-    await waitFor(() => expect(screen.getByPlaceholderText(esMessages.reportForm.carPlaceholder)).toHaveFocus());
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
+    await user.click(screen.getByRole("button", { name: esMessages.reportForm.missingUnit.confirm }));
 
-  it("submits a null car only after the missing-car confirmation", async () => {
-    const user = userEvent.setup();
-    const fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ suggestions: ["M2001"] }),
-      })
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ ok: true, report: { id: "report-1" }, undoToken: "undo-1" }),
-      });
-    vi.stubGlobal("fetch", fetch);
-
-    render(<ReportForm dictionary={esMessages} locale="es" />);
-
-    await user.click(screen.getByTestId("submit-report"));
-    expect(fetch).toHaveBeenCalledTimes(1);
-    await user.click(screen.getByRole("button", { name: esMessages.reportForm.missingCar.confirm }));
-
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    expect(fetch).toHaveBeenLastCalledWith(
+    expect(fetch).toHaveBeenCalledWith(
       "/api/reports",
       expect.objectContaining({
-        body: JSON.stringify({ line: "L1", state: "calor", car: null }),
+        body: JSON.stringify({ route: ROUTES[0], problems: [PROBLEMS[0]], unit: null }),
       }),
     );
-  });
-
-  it("shows a submit failure instead of the helper subtitle when the API fails", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          json: () => Promise.resolve({ suggestions: ["M2001"] }),
-        })
-        .mockRejectedValueOnce(new Error("network failed")),
-    );
-
-    render(<ReportForm dictionary={esMessages} locale="es" />);
-
-    await user.click(screen.getByTestId("submit-report"));
-    await user.click(screen.getByRole("button", { name: esMessages.reportForm.missingCar.confirm }));
-
-    expect(toastMock).toHaveBeenCalledWith(esMessages.reportForm.submitFailed);
-    expect(toastMock).not.toHaveBeenCalledWith(esMessages.reportForm.subtitle);
   });
 });

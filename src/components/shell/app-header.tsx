@@ -5,7 +5,6 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { CircleHelp, Home } from "lucide-react";
 import { AppLogo } from "@/components/ui/app-logo";
 import { ExploreActionIcon, ReportActionIcon } from "@/components/ui/action-icons";
-import { LanguageRadioGroup } from "./language-switcher";
 import { ThemeSegmentedSwitch } from "./theme-toggle";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -101,7 +100,16 @@ export function AppHeader({
           </div>
         </div>
         <div
-          className="max-h-[calc(100dvh-6.5rem)] overflow-y-auto px-3 pb-4"
+          className={cn(
+            "overflow-y-auto px-3 pb-4",
+            // Collapsed by default via isOpen alone -- true on the very first
+            // render, server-side included -- so the drawer doesn't render
+            // expanded before useLayoutEffect below has measured panelHeight.
+            // The outer panel's own height transition (driven by panelHeight)
+            // still does the actual open/close animation; this is just a
+            // correct-by-default fallback, not a second animated transition.
+            isOpen ? "max-h-[calc(100dvh-6.5rem)]" : "max-h-0",
+          )}
           id="app-navigation-drawer"
           inert={!isOpen}
           ref={drawerBodyRef}
@@ -137,10 +145,7 @@ export function AppHeader({
             })}
           </nav>
           <div className="mx-1 mt-8 border-t border-border pt-5">
-            <LanguageRadioGroup label={dictionary.common.language} locale={locale} pathname={pathname} />
-            <div className="mt-5">
-              <ThemeSegmentedSwitch darkLabel={dictionary.common.dark} label={dictionary.common.theme} lightLabel={dictionary.common.light} />
-            </div>
+            <ThemeSegmentedSwitch darkLabel={dictionary.common.dark} label={dictionary.common.theme} lightLabel={dictionary.common.light} />
           </div>
         </div>
       </div>

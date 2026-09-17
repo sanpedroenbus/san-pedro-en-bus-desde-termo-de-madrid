@@ -1,6 +1,8 @@
-# Termo de Madrid
+# San Pedro en Bus
 
-Mobile-first civic PWA for reporting and exploring Metro de Madrid AC conditions.
+Mobile-first civic PWA for reporting and exploring bus service problems in San Pedro, Costa Rica.
+
+Built on top of [Termo de Madrid](https://github.com/nachoggodino/termometro), a citizen tool for reporting broken air conditioning on Metro de Madrid, with the original creator's (nachoggodino) blessing.
 
 ## Local Development
 
@@ -19,14 +21,15 @@ Copy `.env.example` to `.env.local` when wiring Supabase:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SITE_URL=https://termodemadrid.es
+NEXT_PUBLIC_SITE_URL=https://sanpedroenbus.vercel.app
 SUPABASE_SERVICE_ROLE_KEY=
 TERMO_ABUSE_SECRET=
 TERMO_ALLOW_MEMORY_STORE=
 ```
 
-Use a long random value for `TERMO_ABUSE_SECRET`; it salts private abuse keys and undo token hashes.
-Set `NEXT_PUBLIC_SITE_URL` to `https://termodemadrid.es` in production so social preview metadata uses absolute public URLs.
+Use a long random value for `TERMO_ABUSE_SECRET`; it salts private abuse keys and undo token hashes. (These env var names are inherited from the Termo de Madrid fork and are still in active use — see `makeover.md` P3 for the planned rename.)
+
+Set `NEXT_PUBLIC_SITE_URL` to your deployed domain in production so social preview metadata uses absolute public URLs.
 
 ## Supabase
 
@@ -37,7 +40,9 @@ supabase/migrations/*.sql
 supabase/seed.sql
 ```
 
-Dashboard and car-inventory reads run only on the server with the service-role key. Car codes are stored normalized as one uppercase letter plus 4 or 5 digits, for example `M1234`. The UI may display them as `M-1234`.
+The schema was rebuilt from scratch for the bus-report model — `supabase/migrations/0001_initial.sql` is the only migration to apply. Earlier Metro de Madrid migrations are preserved for history under `supabase/archived_migrations/` and should not be applied.
+
+Dashboard and unit-inventory reads run only on the server with the service-role key. A unit identifier (bus unit number or licence plate) is stored normalized to uppercase alphanumeric, 1-10 characters, for example `51` or `SJB1234`.
 
 ## Verification
 
@@ -49,4 +54,6 @@ npm run build
 npm run test:ui
 ```
 
-The same verification suite runs in GitHub Actions. See `DEPLOYMENT.md` for Vercel Preview setup.
+The same verification suite runs in GitHub Actions. See `DEPLOYMENT.md` for Vercel setup.
+
+**Note:** `npm run typecheck` and `npm test` are not currently green — the rebuild from the original Metro de Madrid product is in progress and most test files still target the old model. `npm run build` is the reliable gate for now; see `makeover.md` for the current rebuild status and pending work.

@@ -3,7 +3,6 @@ import { ImageResponse } from "next/og";
 import { NextResponse, type NextRequest } from "next/server";
 import { SOCIAL_IMAGE_TOKENS } from "@/lib/design/tokens";
 import { isLocale } from "@/lib/i18n/config";
-import { messages as enMessages } from "@/lib/i18n/messages/en";
 import { messages as esMessages } from "@/lib/i18n/messages/es";
 
 export async function GET(request: NextRequest) {
@@ -13,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   const locale = requestedLocale;
-  const dictionary = locale === "en" ? enMessages : esMessages;
+  const dictionary = esMessages;
   const origin = request.nextUrl.origin;
 
   const response = new ImageResponse(
@@ -59,64 +58,12 @@ export async function GET(request: NextRequest) {
                 gap: SOCIAL_IMAGE_TOKENS.logoGapPx,
               }}
             >
-              <div
-                style={{
-                  position: "relative",
-                  width: SOCIAL_IMAGE_TOKENS.logoContainerPx,
-                  height: SOCIAL_IMAGE_TOKENS.logoContainerPx,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    width: SOCIAL_IMAGE_TOKENS.logoMarkPx,
-                    height: SOCIAL_IMAGE_TOKENS.logoMarkPx,
-                    background: SOCIAL_IMAGE_TOKENS.metroRed,
-                    borderRadius: SOCIAL_IMAGE_TOKENS.markRadiusPx,
-                    transform: `rotate(${SOCIAL_IMAGE_TOKENS.markRotationDeg}deg)`,
-                  }}
-                />
-                <div
-                  style={{
-                    position: "relative",
-                    width: SOCIAL_IMAGE_TOKENS.logoStemWidthPx,
-                    height: SOCIAL_IMAGE_TOKENS.logoMarkPx,
-                    display: "flex",
-                    borderRadius: SOCIAL_IMAGE_TOKENS.pillRadiusPx,
-                    background: SOCIAL_IMAGE_TOKENS.metroBlue,
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      bottom: `-${SOCIAL_IMAGE_TOKENS.stackGapPx}px`,
-                      width: SOCIAL_IMAGE_TOKENS.logoBulbPx,
-                      height: SOCIAL_IMAGE_TOKENS.logoBulbPx,
-                      border: `${SOCIAL_IMAGE_TOKENS.logoBulbBorderPx}px solid ${SOCIAL_IMAGE_TOKENS.background}`,
-                      borderRadius: SOCIAL_IMAGE_TOKENS.pillRadiusPx,
-                      background: SOCIAL_IMAGE_TOKENS.metroBlue,
-                      transform: "translateX(-50%)",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      top: SOCIAL_IMAGE_TOKENS.stackGapPx,
-                      width: SOCIAL_IMAGE_TOKENS.logoHighlightWidthPx,
-                      height: SOCIAL_IMAGE_TOKENS.logoHighlightHeightPx,
-                      borderRadius: SOCIAL_IMAGE_TOKENS.pillRadiusPx,
-                      background: SOCIAL_IMAGE_TOKENS.surface,
-                      opacity: SOCIAL_IMAGE_TOKENS.logoHighlightOpacity,
-                      transform: "translateX(-50%)",
-                    }}
-                  />
-                </div>
-              </div>
+              <img
+                alt=""
+                height={SOCIAL_IMAGE_TOKENS.logoContainerPx}
+                src={`${origin}/icon.svg`}
+                width={SOCIAL_IMAGE_TOKENS.logoContainerPx}
+              />
               <div
                 style={{
                   display: "flex",
@@ -169,14 +116,14 @@ export async function GET(request: NextRequest) {
           >
             <img
               alt=""
-              height={SOCIAL_IMAGE_TOKENS.trainHeightPx}
-              src={`${origin}/landing-train.svg`}
+              height={SOCIAL_IMAGE_TOKENS.busHeightPx}
+              src={`${origin}/landing-bus.svg`}
               style={{
-                width: SOCIAL_IMAGE_TOKENS.trainWidthPx,
-                height: SOCIAL_IMAGE_TOKENS.trainHeightPx,
-                opacity: SOCIAL_IMAGE_TOKENS.trainOpacity,
+                width: SOCIAL_IMAGE_TOKENS.busWidthPx,
+                height: SOCIAL_IMAGE_TOKENS.busHeightPx,
+                opacity: SOCIAL_IMAGE_TOKENS.busOpacity,
               }}
-              width={SOCIAL_IMAGE_TOKENS.trainWidthPx}
+              width={SOCIAL_IMAGE_TOKENS.busWidthPx}
             />
             <div
               style={{
@@ -205,8 +152,8 @@ export async function GET(request: NextRequest) {
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: SOCIAL_IMAGE_TOKENS.logoGapPx,
-                background: SOCIAL_IMAGE_TOKENS.heatCalor,
-                border: `${SOCIAL_IMAGE_TOKENS.logoBorderPx}px solid ${SOCIAL_IMAGE_TOKENS.heatCalor}`,
+                background: SOCIAL_IMAGE_TOKENS.accent,
+                border: `${SOCIAL_IMAGE_TOKENS.logoBorderPx}px solid ${SOCIAL_IMAGE_TOKENS.accent}`,
                 borderRadius: SOCIAL_IMAGE_TOKENS.radiusPx,
                 color: SOCIAL_IMAGE_TOKENS.ink,
                 padding: `${SOCIAL_IMAGE_TOKENS.actionPaddingBlockPx}px ${SOCIAL_IMAGE_TOKENS.actionPaddingInlinePx}px`,
@@ -274,7 +221,7 @@ export async function GET(request: NextRequest) {
                     width: SOCIAL_IMAGE_TOKENS.actionBarWidthPx,
                     height: SOCIAL_IMAGE_TOKENS.actionBarSmPx,
                     borderRadius: SOCIAL_IMAGE_TOKENS.markRadiusPx,
-                    background: SOCIAL_IMAGE_TOKENS.heatFresco,
+                    background: SOCIAL_IMAGE_TOKENS.categoryFiabilidad,
                   }}
                 />
                 <span
@@ -290,7 +237,7 @@ export async function GET(request: NextRequest) {
                     width: SOCIAL_IMAGE_TOKENS.actionBarWidthPx,
                     height: SOCIAL_IMAGE_TOKENS.actionBarLgPx,
                     borderRadius: SOCIAL_IMAGE_TOKENS.markRadiusPx,
-                    background: SOCIAL_IMAGE_TOKENS.heatInfierno,
+                    background: SOCIAL_IMAGE_TOKENS.categorySeguridad,
                   }}
                 />
               </div>

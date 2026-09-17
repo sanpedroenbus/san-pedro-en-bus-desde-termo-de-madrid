@@ -1,66 +1,73 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { parseSelectedCarSeries, parseSelectedLines } from "@/lib/domain/dashboard-query";
-import { isTimeRange, type DashboardRange } from "@/lib/domain/ranges";
+import { parseSelectedRoutes } from "@/lib/domain/dashboard-query";
+import { isTimeRange, type TimeRange } from "@/lib/domain/ranges";
+import type { Route } from "@/lib/domain/routes";
 import {
-  getCarDetailModule,
-  getHeatTrendModule,
-  getLineSummariesModule,
+  getRouteSummariesModule,
   getProblemSummariesModule,
-  getWorstCarsModule,
+  getRouteDetailModule,
+  getTrendModule,
+  getUnitDetailModule,
+  getUnitExplorerModule,
   type DashboardModuleSearch,
 } from "./dashboard-modules";
 import { getHomeSnapshot } from "./reports-repository";
 
 const REPORTS_CACHE_TAG = "reports";
 
-export async function getCachedHomeSnapshot() {
+export async function getCachedHomeSnapshot(includeDemo = false) {
   "use cache";
   cacheLife({ stale: 30, revalidate: 30, expire: 300 });
   cacheTag(REPORTS_CACHE_TAG);
-  return getHomeSnapshot();
+  return getHomeSnapshot(new Date(), includeDemo);
 }
 
-export async function getCachedExplorePageData(rangeKey: string, linesKey: string, carSeriesKey: string) {
+export async function getCachedExplorePageData(rangeKey: string, routesKey: string, includeDemo = false) {
   "use cache";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(REPORTS_CACHE_TAG);
 
-  const search = parseSearch(rangeKey, linesKey, carSeriesKey);
+  const search = parseSearch(rangeKey, routesKey, includeDemo);
   const now = new Date();
-  const [lineSummaries, problemSummaries, worstCars, heatTrend] = await Promise.all([
-    getLineSummariesModule(search, now),
+  const [routeSummaries, problemSummaries, unitExplorer, trend] = await Promise.all([
+    getRouteSummariesModule(search, now),
     getProblemSummariesModule(search, now),
-    getWorstCarsModule(search, now),
-    getHeatTrendModule(search, now),
+    getUnitExplorerModule(search, now),
+    getTrendModule(search, now),
   ]);
 
   return {
-    ...lineSummaries,
+    ...routeSummaries,
     ...problemSummaries,
-    ...worstCars,
-    ...heatTrend,
+    ...unitExplorer,
+    ...trend,
   };
 }
 
-export async function getCachedCarDetail(rangeKey: string, linesKey: string, carSeriesKey: string, car: string) {
+export async function getCachedUnitDetail(rangeKey: string, routesKey: string, unit: string, includeDemo = false) {
   "use cache";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(REPORTS_CACHE_TAG);
-  return getCarDetailModule(parseSearch(rangeKey, linesKey, carSeriesKey), car);
+  return getUnitDetailModule(parseSearch(rangeKey, routesKey, includeDemo), unit);
 }
 
-export function normalizeDashboardCacheKey(search: DashboardModuleSearch) {
+export async function getCachedRouteDetail(rangeKey: string, routesKey: string, route: Route, includeDemo = false) {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 60, expire: 600 });
+  cacheTag(REPORTS_CACHE_TAG);
+  return getRouteDetailModule(parseSearch(rangeKey, routesKey, includeDemo), route);
+}
+
+export function normalizeDashboardCacheKey(search: Pick<DashboardModuleSearch, "range" | "routes">) {
   return {
     rangeKey: search.range,
-    linesKey: [...new Set(search.lines)].toSorted().join(","),
-    carSeriesKey: [...new Set(search.carSeries ?? [])].toSorted((a, b) => a - b).join(","),
+    routesKey: [...new Set(search.routes)].toSorted().join(","),
   };
 }
 
-function parseSearch(rangeKey: string, linesKey: string, carSeriesKey: string): DashboardModuleSearch {
-  const range: DashboardRange = isTimeRange(rangeKey) ? rangeKey : "summer";
-  const lines = parseSelectedLines(linesKey);
-  const carSeries = parseSelectedCarSeries(carSeriesKey);
-  return { range, lines, carSeries };
+function parseSearch(rangeKey: string, routesKey: string, includeDemo: boolean): DashboardModuleSearch {
+  const range: TimeRange = isTimeRange(rangeKey) ? rangeKey : "all";
+  const routes = parseSelectedRoutes(routesKey);
+  return { range, routes, includeDemo };
 }

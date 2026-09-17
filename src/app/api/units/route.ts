@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { getCarSuggestions } from "@/lib/server/reports-repository";
-import { isMetroLine } from "@/lib/domain/lines";
+import { getUnitSuggestions } from "@/lib/server/reports-repository";
+import { isRoute, ROUTES } from "@/lib/domain/routes";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const requestedLine = url.searchParams.get("line");
-  const line = isMetroLine(requestedLine) ? requestedLine : "L1";
+  const requestedRoute = url.searchParams.get("route");
+  const route = isRoute(requestedRoute) ? requestedRoute : ROUTES[0];
   try {
-    const suggestions = await getCarSuggestions(line);
+    const suggestions = await getUnitSuggestions(route);
     return NextResponse.json(
       { suggestions },
       {
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       },
     );
   } catch (error) {
-    console.error("Failed to load car suggestions", error);
+    console.error("Failed to load unit suggestions", error);
     return NextResponse.json({ suggestions: [], error: "server_error" }, { status: 500 });
   }
 }

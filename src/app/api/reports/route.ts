@@ -26,9 +26,17 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     undoToken: result.undoToken,
+    // Build the public report explicitly rather than spreading result.report:
+    // the memory-store path returns an object that also carries private
+    // abuseKey/undoTokenHash/undoExpiresAt fields, typed as Report but not
+    // actually stripped of them at runtime.
     report: {
-      ...result.report,
+      id: result.report.id,
+      route: result.report.route,
+      unit: result.report.unit,
+      problems: result.report.problems,
       createdAt: result.report.createdAt.toISOString(),
+      hiddenAt: result.report.hiddenAt ? result.report.hiddenAt.toISOString() : null,
     },
   });
 }

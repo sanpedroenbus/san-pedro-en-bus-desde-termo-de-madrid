@@ -1,105 +1,183 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatCarCode,
-  isDuplicateCandidate,
-  isRetiredCarCode,
-  normalizeCarCode,
-  parseReportInput,
-  RETIRED_CAR_SERIES_REASON,
-} from "./reports";
+import { isDuplicateCandidate, normalizeUnitCode, parseReportInput, type Report, type ReportInput } from "./reports";
 
-describe("report validation", () => {
-  it("normalizes loose car codes", () => {
-    expect(normalizeCarCode("m1234")).toBe("M1234");
-    expect(normalizeCarCode(" R-2401 ")).toBe("R2401");
-    expect(normalizeCarCode("s12345")).toBe("S12345");
-    expect(normalizeCarCode("z12345")).toBeNull();
-    expect(normalizeCarCode("nonsense")).toBeNull();
-    expect(formatCarCode("s12345")).toBe("S-12345");
+describe("normalizeUnitCode", () => {
+  it("strips whitespace and uppercases", () => {
+    expect(normalizeUnitCode("  51  ")).toBe("51");
+    expect(normalizeUnitCode("sjb 1234")).toBe("SJB1234");
   });
 
-  it("parses valid report input", () => {
-    const parsed = parseReportInput({ line: "L1", state: "calor", car: "m2001" });
+  it("accepts a short bus unit number", () => {
+    expect(normalizeUnitCode("51")).toBe("51");
+    expect(normalizeUnitCode("099")).toBe("099");
+  });
+
+  it("accepts a full licence plate", () => {
+    expect(normalizeUnitCode("sjb1234")).toBe("SJB1234");
+  });
+
+  it("returns null for empty input", () => {
+    expect(normalizeUnitCode("")).toBeNull();
+    expect(normalizeUnitCode("   ")).toBeNull();
+  });
+
+  it("returns null for input longer than ten characters", () => {
+    expect(normalizeUnitCode("ABCDEFGHIJK")).toBeNull(); // 11 chars
+    expect(normalizeUnitCode("ABCDEFGHIJ")).toBe("ABCDEFGHIJ"); // exactly 10 chars
+  });
+
+  it("returns null for characters outside A-Z0-9", () => {
+    expect(normalizeUnitCode("AB-1234")).toBeNull();
+    expect(normalizeUnitCode("unidad#5")).toBeNull();
+  });
+});
+
+describe("parseReportInput", () => {
+  it("accepts a valid report with a single problem and no unit", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados"] });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.car).toBe("M2001");
+      expect(parsed.data.route).toBe("CEDROS");
+      expect(parsed.data.problems).toEqual(["hacinados"]);
+      expect(parsed.data.unit).toBeNull();
     }
   });
 
-  it("rejects retired series 1000 car codes", () => {
-    for (const car of ["M1000", "R-1255", "S1999"]) {
-      const parsed = parseReportInput({ line: "L1", state: "calor", car });
-      expect(parsed.success).toBe(false);
-      if (!parsed.success) {
-        expect(parsed.error.issues.some((issue) => issue.message === RETIRED_CAR_SERIES_REASON)).toBe(true);
-      }
-      expect(isRetiredCarCode(car)).toBe(true);
-    }
-
-    expect(isRetiredCarCode("M2000")).toBe(false);
-    expect(parseReportInput({ line: "L1", state: "calor", car: "M2000" }).success).toBe(true);
-    expect(parseReportInput({ line: "L1", state: "calor", car: "M4000" }).success).toBe(true);
-  });
-
-  it("accepts omitted or null optional car input", () => {
-    const omitted = parseReportInput({ line: "L1", state: "calor" });
-    const nullable = parseReportInput({ line: "L1", state: "calor", car: null });
-
-    expect(omitted.success).toBe(true);
-    expect(nullable.success).toBe(true);
-    if (nullable.success) {
-      expect(nullable.data.car).toBeNull();
+  it("accepts a report with multiple problems", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"] });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.problems).toEqual(["hacinados", "acoso", "cucarachas"]);
     }
   });
 
-  it("rejects non-empty invalid car input", () => {
-    expect(parseReportInput({ line: "L1", state: "calor", car: "1234" }).success).toBe(false);
-    expect(parseReportInput({ line: "L1", state: "calor", car: "AB1234" }).success).toBe(false);
-    expect(parseReportInput({ line: "L1", state: "calor", car: "M123" }).success).toBe(false);
-    expect(parseReportInput({ line: "L1", state: "calor", car: "Z1234" }).success).toBe(false);
+  it("normalizes a valid unit code", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados"], unit: " 51 " });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.unit).toBe("51");
+    }
   });
 
-  it("detects short-window duplicates", () => {
-    const now = new Date("2026-07-05T12:00:00Z");
-    expect(
-      isDuplicateCandidate(
-        { line: "L1", state: "calor", car: "M2001" },
-        { id: "1", line: "L1", state: "calor", car: "M2001", createdAt: new Date("2026-07-05T11:55:00Z") },
-        now,
-      ),
-    ).toBe(true);
+  it("silently downgrades an invalid unit to null rather than failing the whole report", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados"], unit: "not a valid unit!!" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.unit).toBeNull();
+    }
   });
 
-  it("suppresses same-line no-car reports inside the duplicate window", () => {
-    const now = new Date("2026-07-05T12:00:00Z");
-    expect(
-      isDuplicateCandidate(
-        { line: "L1", state: "infierno", car: null },
-        { id: "1", line: "L1", state: "calor", car: null, createdAt: new Date("2026-07-05T11:55:00Z") },
-        now,
-      ),
-    ).toBe(true);
+  it("accepts an explicit null unit", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados"], unit: null });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.unit).toBeNull();
+    }
   });
 
-  it("does not suppress no-car reports across different lines", () => {
-    const now = new Date("2026-07-05T12:00:00Z");
-    expect(
-      isDuplicateCandidate(
-        { line: "L2", state: "calor", car: null },
-        { id: "1", line: "L1", state: "calor", car: null, createdAt: new Date("2026-07-05T11:55:00Z") },
-        now,
-      ),
-    ).toBe(false);
+  it("rejects an unknown route", () => {
+    const parsed = parseReportInput({ route: "L1", problems: ["hacinados"] });
+    expect(parsed.success).toBe(false);
   });
 
-  it("does not treat expired duplicate windows as duplicates", () => {
-    const now = new Date("2026-07-05T12:00:00Z");
-    expect(
-      isDuplicateCandidate(
-        { line: "L1", state: "calor", car: "M2001" },
-        { id: "1", line: "L1", state: "calor", car: "M2001", createdAt: new Date("2026-07-05T11:30:00Z") },
-        now,
-      ),
-    ).toBe(false);
+  it("rejects a report with zero problems", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: [] });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a report with an unknown problem", () => {
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["calor"] });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a report missing required fields", () => {
+    expect(parseReportInput({}).success).toBe(false);
+    expect(parseReportInput({ route: "CEDROS" }).success).toBe(false);
+    expect(parseReportInput(null).success).toBe(false);
+  });
+});
+
+describe("isDuplicateCandidate", () => {
+  const now = new Date("2026-07-05T12:00:00Z");
+
+  function previousReport(partial: Partial<Report>): Report {
+    return {
+      id: "prev",
+      route: "CEDROS",
+      unit: null,
+      problems: ["hacinados"],
+      createdAt: new Date("2026-07-05T11:55:00Z"),
+      hiddenAt: null,
+      ...partial,
+    };
+  }
+
+  function currentInput(partial: Partial<ReportInput>): ReportInput {
+    return {
+      route: "CEDROS",
+      problems: ["hacinados"],
+      unit: null,
+      ...partial,
+    };
+  }
+
+  it("flags a same-unit, same-route, same-problems report inside the window", () => {
+    const previous = previousReport({ unit: "51", problems: ["hacinados"] });
+    const current = currentInput({ unit: "51", problems: ["hacinados"] });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(true);
+  });
+
+  it("treats problem sets as unordered when comparing same-unit reports", () => {
+    const previous = previousReport({ unit: "51", problems: ["hacinados", "acoso"] });
+    const current = currentInput({ unit: "51", problems: ["acoso", "hacinados"] });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(true);
+  });
+
+  it("does not flag same-unit reports with a different set of problems", () => {
+    const previous = previousReport({ unit: "51", problems: ["hacinados"] });
+    const current = currentInput({ unit: "51", problems: ["acoso"] });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(false);
+  });
+
+  it("does not flag different units on the same route", () => {
+    const previous = previousReport({ unit: "51", problems: ["hacinados"] });
+    const current = currentInput({ unit: "52", problems: ["hacinados"] });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(false);
+  });
+
+  it("suppresses same-route no-unit reports regardless of which problems were reported", () => {
+    const previous = previousReport({ unit: null, problems: ["hacinados"] });
+    const current = currentInput({ unit: null, problems: ["acoso", "cucarachas"] });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(true);
+  });
+
+  it("does not suppress no-unit reports on a different route", () => {
+    const previous = previousReport({ route: "CEDROS", unit: null });
+    const current = currentInput({ route: "SABANILLA", unit: null });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(false);
+  });
+
+  it("does not flag a no-unit report against a previous report that had a unit", () => {
+    const previous = previousReport({ unit: "51" });
+    const current = currentInput({ unit: null });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(false);
+  });
+
+  it("is inclusive of the exact window boundary", () => {
+    const previous = previousReport({ unit: "51", createdAt: new Date(now.getTime() - 12 * 60_000) });
+    const current = currentInput({ unit: "51" });
+    expect(isDuplicateCandidate(current, previous, now, 12)).toBe(true);
+  });
+
+  it("excludes reports one millisecond past the window", () => {
+    const previous = previousReport({ unit: "51", createdAt: new Date(now.getTime() - 12 * 60_000 - 1) });
+    const current = currentInput({ unit: "51" });
+    expect(isDuplicateCandidate(current, previous, now, 12)).toBe(false);
+  });
+
+  it("treats a previous report timestamped after 'now' as outside the window", () => {
+    const previous = previousReport({ unit: "51", createdAt: new Date(now.getTime() + 1000) });
+    const current = currentInput({ unit: "51" });
+    expect(isDuplicateCandidate(current, previous, now)).toBe(false);
   });
 });
