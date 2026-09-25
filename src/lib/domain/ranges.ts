@@ -4,10 +4,11 @@ export const TIME_RANGES = ["today", "sevenDays", "thirtyDays", "all"] as const;
 
 export type TimeRange = (typeof TIME_RANGES)[number];
 
-// "all" has no natural start date. Bound it to a fixed lookback so bucketing
-// in dashboard.ts stays finite and cheap instead of walking back to the
-// epoch. Revisit once the app has a real multi-year history worth showing.
-const ALL_RANGE_LOOKBACK_DAYS = 730;
+// "all" has no natural start date. Bound it to when the app actually
+// launched, so the range doesn't imply years of history the app doesn't
+// have. Revisit (e.g. back to a rolling lookback) once the app's real
+// history grows past what a fixed date usefully covers.
+const ALL_RANGE_START = new Date("2026-08-01T12:00:00Z");
 
 export function isTimeRange(value: unknown): value is TimeRange {
   return typeof value === "string" && TIME_RANGES.includes(value as TimeRange);
@@ -23,7 +24,7 @@ export function getRangeStart(range: TimeRange, now = new Date()) {
   if (range === "thirtyDays") {
     return getLocalStartOfDay(now, -29);
   }
-  return getLocalStartOfDay(now, -ALL_RANGE_LOOKBACK_DAYS);
+  return getLocalStartOfDay(ALL_RANGE_START);
 }
 
 export function getRangeEnd(now = new Date()) {

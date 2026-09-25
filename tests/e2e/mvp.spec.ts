@@ -130,6 +130,45 @@ test("explore filters narrow the dashboard to a single route", async ({ page }) 
   await expect(routeVolumeSection.getByText("La Europa", { exact: true })).toHaveCount(0);
 });
 
+test("explore filters narrow the dashboard by problem", async ({ page }) => {
+  await page.goto("/es/explorar?rango=all");
+
+  const problemsSection = page.locator("#problems");
+  await expect(problemsSection.getByText("Había cucarachas", { exact: true })).toBeVisible();
+  const routeVolumeSection = page.locator("#report-volume");
+  const totalBefore = await getTotalReports(routeVolumeSection);
+
+  await page.getByRole("button", { name: "Filtros" }).click();
+  const filterDialog = page.locator(".centered-popover", { hasText: "Filtrar estadísticas" });
+  await expect(filterDialog).toBeVisible();
+
+  await filterDialog.getByRole("button", { name: "Había cucarachas", exact: true }).click();
+  await page.getByRole("button", { name: "Aplicar filtros" }).click();
+
+  await expect(page).toHaveURL(/problema=cucarachas/);
+
+  // Filtering by a single problem can only ever narrow the dataset (every
+  // remaining report carries "cucarachas", by definition of the filter) --
+  // it must never show as many or more reports than the unfiltered total.
+  const totalAfter = await getTotalReports(routeVolumeSection);
+  expect(totalAfter).toBeLessThan(totalBefore);
+  expect(totalAfter).toBeGreaterThan(0);
+});
+
+async function getTotalReports(section: import("@playwright/test").Locator) {
+  const values = await section.locator("g text").allTextContents();
+  return values.map(Number).filter((n) => Number.isFinite(n)).reduce((sum, n) => sum + n, 0);
+}
+
+test("report form links out to the open-ended report form", async ({ page }) => {
+  await page.goto("/es/reportar");
+
+  const openReportLink = page.getByRole("link", { name: /Contanoslo acá/ });
+  await expect(openReportLink).toBeVisible();
+  await expect(openReportLink).toHaveAttribute("target", "_blank");
+  await expect(openReportLink).toHaveAttribute("href", /^https:\/\//);
+});
+
 test("dashboard reports-per-route chart reflects the two heaviest seeded routes", async ({ page }) => {
   await page.goto("/es/explorar");
 

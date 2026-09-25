@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
             <img
               alt=""
               height={SOCIAL_IMAGE_TOKENS.busHeightPx}
-              src={`${origin}/landing-bus.svg`}
+              src={`${origin}/landing-bus.png`}
               style={{
                 width: SOCIAL_IMAGE_TOKENS.busWidthPx,
                 height: SOCIAL_IMAGE_TOKENS.busHeightPx,

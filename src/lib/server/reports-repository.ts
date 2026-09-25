@@ -8,10 +8,12 @@ import {
   isDuplicateCandidate,
   NO_UNIT_ORIGIN_WINDOW_MINUTES,
   RATE_LIMIT_MAX_REPORTS,
+  reportMatchesProblems,
   type Report,
   type ReportInput,
 } from "@/lib/domain/reports";
 import { isRoute, type Route } from "@/lib/domain/routes";
+import type { Problem } from "@/lib/domain/problems";
 import {
   createAbuseKey,
   createUndoToken,
@@ -110,6 +112,11 @@ function filterMemoryReportsByRoute(reports: Report[], routes?: Route[]) {
   return reports.filter((report) => routes.includes(report.route));
 }
 
+function filterMemoryReportsByProblems(reports: Report[], problems?: Problem[]) {
+  if (!problems?.length) return reports;
+  return reports.filter((report) => reportMatchesProblems(report, problems));
+}
+
 // Mirrors the Supabase-path floor in dashboard-modules.ts's getReportsForSearch:
 // the live app never shows anything before the demo cutoff.
 function filterLiveReports(reports: Report[], includeDemo?: boolean) {
@@ -121,26 +128,30 @@ function getLatestReportTime(reports: Report[], fallback: Date): Date {
   return reports.reduce((latest, report) => (report.createdAt > latest ? report.createdAt : latest), fallback);
 }
 
-export function getMemoryDashboard(options: { range: TimeRange; routes?: Route[]; includeDemo?: boolean; now?: Date }) {
-  const now = options.now ?? new Date();
-  const memoryReports = filterLiveReports(filterMemoryReportsByRoute(getMemoryReports(), options.routes), options.includeDemo);
-  return buildDashboardData(memoryReports, now, options.range);
+function getFilteredMemoryReports(options: { routes?: Route[]; problems?: Problem[]; includeDemo?: boolean }) {
+  const byRoute = filterMemoryReportsByRoute(getMemoryReports(), options.routes);
+  const byProblems = filterMemoryReportsByProblems(byRoute, options.problems);
+  return filterLiveReports(byProblems, options.includeDemo);
 }
 
-export function getMemoryUnitDetail(options: { range: TimeRange; routes?: Route[]; includeDemo?: boolean; unit: string; now?: Date }) {
+export function getMemoryDashboard(options: { range: TimeRange; routes?: Route[]; problems?: Problem[]; includeDemo?: boolean; now?: Date }) {
   const now = options.now ?? new Date();
-  const memoryReports = filterLiveReports(filterMemoryReportsByRoute(getMemoryReports(), options.routes), options.includeDemo);
-  return buildUnitExplorerSelection(options.unit, memoryReports, now, options.range);
+  return buildDashboardData(getFilteredMemoryReports(options), now, options.range);
+}
+
+export function getMemoryUnitDetail(options: { range: TimeRange; routes?: Route[]; problems?: Problem[]; includeDemo?: boolean; unit: string; now?: Date }) {
+  const now = options.now ?? new Date();
+  return buildUnitExplorerSelection(options.unit, getFilteredMemoryReports(options), now, options.range);
 }
 
 // Unlike buildUnitExplorerSelection, buildRouteProblemBreakdown does not take
 // a range window itself (it only strips hidden reports) so the range filter
 // has to happen here, mirroring how getReportsForSearch already scopes the
 // Supabase query to the range window before calling the same domain function.
-export function getMemoryRouteDetail(options: { range: TimeRange; routes?: Route[]; includeDemo?: boolean; route: Route; now?: Date }) {
+export function getMemoryRouteDetail(options: { range: TimeRange; routes?: Route[]; problems?: Problem[]; includeDemo?: boolean; route: Route; now?: Date }) {
   const now = options.now ?? new Date();
   const rangeWindow = getRangeWindow(options.range, now);
-  const memoryReports = filterLiveReports(filterMemoryReportsByRoute(getMemoryReports(), options.routes), options.includeDemo).filter(
+  const memoryReports = getFilteredMemoryReports(options).filter(
     (report) => report.createdAt >= rangeWindow.start && report.createdAt <= rangeWindow.end,
   );
   return buildRouteProblemBreakdown(options.route, memoryReports);

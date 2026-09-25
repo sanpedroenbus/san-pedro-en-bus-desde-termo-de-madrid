@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseDashboardRange, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
+import { parseDashboardRange, parseSelectedProblems, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
 import { isRoute } from "@/lib/domain/routes";
 import { getCachedRouteDetail, normalizeDashboardCacheKey } from "@/lib/server/dashboard-cache";
 
@@ -11,10 +11,11 @@ export async function GET(request: Request) {
   const key = normalizeDashboardCacheKey({
     range: parseDashboardRange(params.get("rango")),
     routes: parseSelectedRoutes(params.get("ruta")),
+    problems: parseSelectedProblems(params.get("problema")),
   });
   const includeDemo = params.get("demo") === "1";
   try {
-    const breakdown = await getCachedRouteDetail(key.rangeKey, key.routesKey, targetRoute, includeDemo);
+    const breakdown = await getCachedRouteDetail(key.rangeKey, key.routesKey, key.problemsKey, targetRoute, includeDemo);
     return NextResponse.json({ breakdown }, { status: 200 });
   } catch (error) {
     console.error("Failed to load route dashboard detail", error);

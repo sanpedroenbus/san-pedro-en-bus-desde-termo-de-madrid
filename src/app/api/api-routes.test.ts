@@ -11,9 +11,10 @@ const dashboardCacheMock = vi.hoisted(() => ({
   // reimplemented here rather than imported for real because that module is
   // marked "server-only" and pulls in "next/cache" cache directives that
   // vitest can't resolve outside of the Next build pipeline.
-  normalizeDashboardCacheKey: vi.fn((search: { range: string; routes: string[] }) => ({
+  normalizeDashboardCacheKey: vi.fn((search: { range: string; routes: string[]; problems: string[] }) => ({
     rangeKey: search.range,
     routesKey: [...new Set(search.routes)].sort().join(","),
+    problemsKey: [...new Set(search.problems)].sort().join(","),
   })),
 }));
 
@@ -244,7 +245,7 @@ describe("GET /api/dashboard/unit", () => {
 
     expect(response.status).toBe(200);
     expect(payload.selection).toEqual({ unit: "51", reports: 3, routes: ["CEDROS"], history: [] });
-    expect(dashboardCacheMock.getCachedUnitDetail).toHaveBeenCalledWith("thirtyDays", "CEDROS,SABANILLA", "51");
+    expect(dashboardCacheMock.getCachedUnitDetail).toHaveBeenCalledWith("thirtyDays", "CEDROS,SABANILLA", "", "51", false);
   });
 
   it("returns 404 when the unit has no reports in range", async () => {

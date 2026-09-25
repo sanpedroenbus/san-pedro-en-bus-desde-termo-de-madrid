@@ -53,18 +53,6 @@ export default async function MethodologyPage({ params }: { params: Promise<{ la
             </ul>
           </MethodologySection>
 
-          <MethodologySection id="confidence" title={dictionary.methodology.confidenceTitle}>
-            <p>
-              <strong>{dictionary.methodology.confidenceLead}</strong>
-            </p>
-            <p>{dictionary.methodology.confidenceBody}</p>
-            <ul className="list-disc space-y-2 pl-5">
-              {dictionary.methodology.confidenceRules.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </MethodologySection>
-
           <MethodologySection id="fleet" title={dictionary.methodology.fleetTitle}>
             <p>
               <strong>{dictionary.methodology.fleetLead}</strong>

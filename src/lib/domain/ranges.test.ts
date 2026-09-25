@@ -31,9 +31,9 @@ describe("time ranges", () => {
     expect(getRangeStart("today", justAfterLocalMidnight).toISOString()).toBe("2026-07-05T06:00:00.000Z");
   });
 
-  it("bounds the 'all' range to a documented 730-day lookback rather than the epoch", () => {
-    const now = new Date("2026-07-05T12:00:00Z");
-    expect(getRangeStart("all", now).toISOString()).toBe("2024-07-05T06:00:00.000Z");
+  it("bounds the 'all' range to the app's launch date rather than the epoch", () => {
+    const now = new Date("2026-09-24T12:00:00Z");
+    expect(getRangeStart("all", now).toISOString()).toBe("2026-08-01T06:00:00.000Z");
   });
 
   it("ends every range at the provided instant, not the end of a calendar day", () => {

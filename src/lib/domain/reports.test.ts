@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { isDuplicateCandidate, normalizeUnitCode, parseReportInput, type Report, type ReportInput } from "./reports";
+import { isDuplicateCandidate, normalizeUnitCode, parseReportInput, reportMatchesProblems, type Report, type ReportInput } from "./reports";
+
+describe("reportMatchesProblems", () => {
+  it("matches when no problems are selected (no-op filter)", () => {
+    expect(reportMatchesProblems({ problems: ["hacinados"] }, [])).toBe(true);
+    expect(reportMatchesProblems({ problems: [] }, [])).toBe(true);
+  });
+
+  it("matches a report that carries any of the selected problems", () => {
+    expect(reportMatchesProblems({ problems: ["hacinados", "cucarachas"] }, ["cucarachas"])).toBe(true);
+    expect(reportMatchesProblems({ problems: ["cucarachas"] }, ["hacinados", "cucarachas"])).toBe(true);
+  });
+
+  it("does not match a report with none of the selected problems", () => {
+    expect(reportMatchesProblems({ problems: ["hacinados"] }, ["cucarachas"])).toBe(false);
+  });
+
+  it("does not require the report to carry every selected problem", () => {
+    expect(reportMatchesProblems({ problems: ["hacinados"] }, ["hacinados", "cucarachas"])).toBe(true);
+  });
+});
 
 describe("normalizeUnitCode", () => {
   it("strips whitespace and uppercases", () => {

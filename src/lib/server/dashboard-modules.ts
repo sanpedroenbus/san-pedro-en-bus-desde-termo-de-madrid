@@ -9,6 +9,7 @@ import {
 } from "@/lib/domain/dashboard";
 import { cache } from "react";
 import { isRoute, type Route } from "@/lib/domain/routes";
+import type { Problem } from "@/lib/domain/problems";
 import { getRangeWindow, type TimeRange } from "@/lib/domain/ranges";
 import { DEMO_DATA_CUTOFF } from "@/lib/domain/demo";
 import type { Report } from "@/lib/domain/reports";
@@ -17,6 +18,7 @@ import { getMemoryDashboard, getMemoryRouteDetail, getMemoryUnitDetail, getSupab
 export type DashboardModuleSearch = {
   range: TimeRange;
   routes: Route[];
+  problems: Problem[];
   includeDemo: boolean;
 };
 
@@ -53,6 +55,13 @@ const getReportsForSearch = cache(async function getReportsForSearch(search: Das
     query = query.in("route", search.routes);
   }
 
+  if (search.problems.length > 0) {
+    // Match reports that carry at least one of the selected problems (an
+    // "any overlap" filter, not "contains all selected problems") --
+    // mirrors reportMatchesProblems, which the memory-store path uses.
+    query = query.overlaps("problems", search.problems);
+  }
+
   const { data, error } = await query;
   if (error) throw error;
 
@@ -73,7 +82,7 @@ async function getDashboardForSearch(search: DashboardModuleSearch, now: Date): 
   if (reports) {
     return buildDashboardData(reports, now, search.range);
   }
-  return getMemoryDashboard({ range: search.range, routes: search.routes, includeDemo: search.includeDemo, now });
+  return getMemoryDashboard({ range: search.range, routes: search.routes, problems: search.problems, includeDemo: search.includeDemo, now });
 }
 
 export async function getRouteSummariesModule(search: DashboardModuleSearch, now = new Date()): Promise<RouteSummariesModuleData> {
@@ -101,7 +110,7 @@ export async function getUnitDetailModule(search: DashboardModuleSearch, unit: s
   if (reports) {
     return buildUnitExplorerSelection(unit, reports, now, search.range);
   }
-  return getMemoryUnitDetail({ range: search.range, routes: search.routes, includeDemo: search.includeDemo, unit, now });
+  return getMemoryUnitDetail({ range: search.range, routes: search.routes, problems: search.problems, includeDemo: search.includeDemo, unit, now });
 }
 
 // getReportsForSearch already scopes its Supabase query to the range window,
@@ -113,5 +122,5 @@ export async function getRouteDetailModule(search: DashboardModuleSearch, route:
   if (reports) {
     return buildRouteProblemBreakdown(route, reports);
   }
-  return getMemoryRouteDetail({ range: search.range, routes: search.routes, includeDemo: search.includeDemo, route, now });
+  return getMemoryRouteDetail({ range: search.range, routes: search.routes, problems: search.problems, includeDemo: search.includeDemo, route, now });
 }

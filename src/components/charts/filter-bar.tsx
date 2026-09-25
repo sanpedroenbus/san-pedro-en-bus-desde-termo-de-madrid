@@ -5,23 +5,35 @@ import { ListTree, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ROUTE_COLORS, ROUTE_LABELS, ROUTES, type Route } from "@/lib/domain/routes";
+import { PROBLEM_CATEGORIES, PROBLEM_CATEGORY, PROBLEMS, type Problem, type ProblemCategory } from "@/lib/domain/problems";
 import { TIME_RANGES, type TimeRange } from "@/lib/domain/ranges";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CenteredPopoverPanel, StickyUtilityBar } from "@/components/ui/popover-shell";
+import { getProblemLabel } from "@/components/report/problem-label";
+
+const PROBLEMS_BY_CATEGORY: Record<ProblemCategory, Problem[]> = PROBLEM_CATEGORIES.reduce(
+  (acc, category) => {
+    acc[category] = PROBLEMS.filter((problem) => PROBLEM_CATEGORY[problem] === category);
+    return acc;
+  },
+  {} as Record<ProblemCategory, Problem[]>,
+);
 
 export function FilterBar({
   dictionary,
   locale,
   selectedRoutes,
+  selectedProblems,
   selectedRange,
   demoMode = false,
 }: {
   dictionary: Dictionary;
   locale: Locale;
   selectedRoutes: Route[];
+  selectedProblems: Problem[];
   selectedRange: TimeRange;
   demoMode?: boolean;
 }) {
@@ -30,6 +42,7 @@ export function FilterBar({
   const [open, setOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [draftRoutes, setDraftRoutes] = useState<Route[]>(selectedRoutes);
+  const [draftProblems, setDraftProblems] = useState<Problem[]>(selectedProblems);
   const [draftRange, setDraftRange] = useState<TimeRange>(selectedRange);
 
   useEffect(() => {
@@ -41,10 +54,11 @@ export function FilterBar({
     };
   }, [open, navigationOpen]);
 
-  function href(routes: Route[], range = selectedRange) {
+  function href(routes: Route[], problems: Problem[], range = selectedRange) {
     const params = new URLSearchParams();
     if (routes.length > 0) params.set("ruta", routes.join(","));
-    if (range !== "all") params.set("rango", range);
+    if (problems.length > 0) params.set("problema", problems.join(","));
+    if (range !== "thirtyDays") params.set("rango", range);
     const basePath = demoMode ? "/demo/explorar" : `/${locale}/explorar`;
     return `${basePath}${params.size ? `?${params.toString()}` : ""}`;
   }
@@ -52,28 +66,35 @@ export function FilterBar({
   function applyFilters() {
     setOpen(false);
     startTransition(() => {
-      router.push(href(draftRoutes, draftRange));
+      router.push(href(draftRoutes, draftProblems, draftRange));
     });
   }
 
   function clearFilters() {
     setDraftRoutes([]);
-    setDraftRange("all");
+    setDraftProblems([]);
+    setDraftRange("thirtyDays");
   }
 
   function toggleRoute(route: Route) {
     setDraftRoutes((current) => (current.includes(route) ? current.filter((item) => item !== route) : [...current, route]));
   }
 
+  function toggleProblem(problem: Problem) {
+    setDraftProblems((current) => (current.includes(problem) ? current.filter((item) => item !== problem) : [...current, problem]));
+  }
+
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
       setDraftRoutes(selectedRoutes);
+      setDraftProblems(selectedProblems);
       setDraftRange(selectedRange);
     }
     setOpen(nextOpen);
   }
 
   const selectedRouteLabel = getSelectedRouteLabel(selectedRoutes, dictionary);
+  const selectedProblemLabel = getSelectedProblemLabel(selectedProblems, dictionary);
   const activeRangeLabel = dictionary.explore.ranges[selectedRange];
 
   return (
@@ -83,7 +104,7 @@ export function FilterBar({
             <div className="min-w-0">
               <p className="text-xs font-semibold text-muted">{dictionary.explore.filters.active}</p>
               <p className="truncate text-sm font-semibold">
-                {[selectedRouteLabel, activeRangeLabel].filter(Boolean).join(" · ")}
+                {[selectedRouteLabel, selectedProblemLabel, activeRangeLabel].filter(Boolean).join(" · ")}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -151,6 +172,29 @@ export function FilterBar({
                 </button>
                 {ROUTES.map((route) => (
                   <RouteSwatch active={draftRoutes.includes(route)} label={ROUTE_LABELS[route]} route={route} onClick={() => toggleRoute(route)} key={route} />
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-semibold text-muted">{dictionary.explore.filters.problem}</p>
+              <div className="flex flex-col gap-3">
+                {PROBLEM_CATEGORIES.map((category) => (
+                  <div key={category}>
+                    <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+                      {dictionary.problemCategories[category]}
+                    </p>
+                    <div className="flex flex-wrap items-stretch gap-1.5">
+                      {PROBLEMS_BY_CATEGORY[category].map((problem) => (
+                        <ProblemSwatch
+                          active={draftProblems.includes(problem)}
+                          key={problem}
+                          label={getProblemLabel(dictionary, problem)}
+                          onClick={() => toggleProblem(problem)}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -223,6 +267,22 @@ function RouteSwatch({
   );
 }
 
+function ProblemSwatch({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      aria-pressed={active}
+      className={cn(
+        "filter-swatch filter-swatch-text selection-flow rounded-md border px-2 py-1 text-left font-semibold transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-border bg-surface-raised text-muted hover:bg-surface hover:text-foreground",
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
 function allRoutesClass(selected: boolean) {
   return cn(
     "filter-swatch filter-swatch-text flex items-center justify-center rounded-md border px-2 py-1 font-semibold transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
@@ -241,4 +301,10 @@ function getSelectedRouteLabel(selectedRoutes: Route[], dictionary: Dictionary) 
   if (selectedRoutes.length === 0) return dictionary.explore.allRoutes;
   if (selectedRoutes.length <= 3) return selectedRoutes.map((route) => ROUTE_LABELS[route]).join(", ");
   return dictionary.explore.filters.routeCount.replace("{count}", String(selectedRoutes.length));
+}
+
+function getSelectedProblemLabel(selectedProblems: Problem[], dictionary: Dictionary) {
+  if (selectedProblems.length === 0) return null;
+  if (selectedProblems.length === 1) return getProblemLabel(dictionary, selectedProblems[0]);
+  return dictionary.explore.filters.problemCount.replace("{count}", String(selectedProblems.length));
 }
