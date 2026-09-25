@@ -7,7 +7,7 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 export default async function DemoExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ ruta?: string; rango?: string; unidad?: string }>;
+  searchParams: Promise<{ ruta?: string; rango?: string; unidad?: string; problema?: string }>;
 }) {
   const dictionary = await getDictionary(DEFAULT_LOCALE);
 

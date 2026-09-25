@@ -6,7 +6,7 @@ import { ExploreActionIcon } from "@/components/ui/action-icons";
 import { getCachedExplorePageData, normalizeDashboardCacheKey } from "@/lib/server/dashboard-cache";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
-import { parseDashboardRange, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
+import { parseDashboardRange, parseSelectedProblems, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
 import { normalizeUnitCode } from "@/lib/domain/reports";
 import { notFound } from "next/navigation";
 import ExploreLoading from "./loading";
@@ -16,7 +16,7 @@ export default async function ExplorePage({
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ ruta?: string; rango?: string; unidad?: string }>;
+  searchParams: Promise<{ ruta?: string; rango?: string; unidad?: string; problema?: string }>;
 }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
@@ -39,21 +39,29 @@ export async function ExploreContent({
 }: {
   dictionary: Awaited<ReturnType<typeof getDictionary>>;
   lang: "es";
-  searchParams: Promise<{ ruta?: string; rango?: string; unidad?: string }>;
+  searchParams: Promise<{ ruta?: string; rango?: string; unidad?: string; problema?: string }>;
   includeDemo: boolean;
 }) {
   const search = await searchParams;
   const selectedRange = parseDashboardRange(search.rango);
   const selectedRoutes = parseSelectedRoutes(search.ruta);
+  const selectedProblems = parseSelectedProblems(search.problema);
   const selectedUnit = search.unidad ? normalizeUnitCode(search.unidad) : null;
   const rangeLabel = dictionary.explore.ranges[selectedRange];
-  const cacheKey = normalizeDashboardCacheKey({ range: selectedRange, routes: selectedRoutes });
-  const data = await getCachedExplorePageData(cacheKey.rangeKey, cacheKey.routesKey, includeDemo);
+  const cacheKey = normalizeDashboardCacheKey({ range: selectedRange, routes: selectedRoutes, problems: selectedProblems });
+  const data = await getCachedExplorePageData(cacheKey.rangeKey, cacheKey.routesKey, cacheKey.problemsKey, includeDemo);
 
   return (
     <main className="min-h-dvh">
       <div className="mx-auto max-w-3xl px-4 pb-5">
-        <FilterBar demoMode={includeDemo} dictionary={dictionary} locale={lang} selectedRoutes={selectedRoutes} selectedRange={selectedRange} />
+        <FilterBar
+          demoMode={includeDemo}
+          dictionary={dictionary}
+          locale={lang}
+          selectedProblems={selectedProblems}
+          selectedRoutes={selectedRoutes}
+          selectedRange={selectedRange}
+        />
 
         <section className="py-6">
           <div className="flex items-center justify-center gap-2">
@@ -73,6 +81,7 @@ export async function ExploreContent({
             dictionary={dictionary}
             includeDemo={includeDemo}
             initialUnit={selectedUnit}
+            problems={selectedProblems}
             routes={selectedRoutes}
             locale={lang}
             rangeLabel={rangeLabel}
@@ -85,6 +94,7 @@ export async function ExploreContent({
           dictionary={dictionary}
           includeDemo={includeDemo}
           locale={lang}
+          selectedProblems={selectedProblems}
           selectedRange={selectedRange}
           selectedRoutes={selectedRoutes}
         />

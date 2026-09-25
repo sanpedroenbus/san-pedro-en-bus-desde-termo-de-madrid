@@ -2,11 +2,11 @@
 
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getConfidence, type Confidence } from "@/lib/domain/confidence";
 import { RouteBadge } from "@/components/ui/route-badge";
 import { InfoTooltip } from "@/components/ui/tooltip";
 import { type RouteProblemBreakdown, type RouteSummary } from "@/lib/domain/dashboard";
 import { type Route } from "@/lib/domain/routes";
+import type { Problem } from "@/lib/domain/problems";
 import type { TimeRange } from "@/lib/domain/ranges";
 import { getProblemLabel } from "@/components/report/problem-label";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -19,18 +19,11 @@ const ROUTE_PROBLEM_LIST_LIMIT = 5;
 
 type RouteDetailLoadStatus = "idle" | "loading" | "loaded" | "error";
 
-// getConfidence() only reads the length of the array it's given — route
-// summaries only carry a report count, not the individual reports, so a
-// same-length placeholder array is enough to reuse the shared threshold logic
-// instead of duplicating it here.
-function confidenceFromCount(count: number): Confidence {
-  return getConfidence(Array.from({ length: count }, () => ({ createdAt: new Date(0) })));
-}
-
 export function RouteDetailCards({
   cards,
   dictionary,
   selectedRoutes,
+  selectedProblems,
   selectedRange,
   locale,
   includeDemo = false,
@@ -38,6 +31,7 @@ export function RouteDetailCards({
   cards: RouteSummary[];
   dictionary: Dictionary;
   selectedRoutes: Route[];
+  selectedProblems: Problem[];
   selectedRange: TimeRange;
   locale: Locale;
   includeDemo?: boolean;
@@ -46,12 +40,13 @@ export function RouteDetailCards({
     .filter((summary) => (selectedRoutes.length > 0 ? selectedRoutes.includes(summary.route) : true))
     .toSorted((a, b) => b.reports - a.reports);
   const routesKey = selectedRoutes.toSorted().join(",");
+  const problemsKey = selectedProblems.toSorted().join(",");
 
   return (
     <section className="scroll-mt-[13rem] pt-4" id="route-details">
       <div className="mb-3 flex items-center gap-2">
         <h2 className="text-base font-semibold">{dictionary.explore.modules.routeDetails}</h2>
-        <InfoTooltip label={dictionary.explore.modules.routeDetails}>{dictionary.explore.confidenceHelp}</InfoTooltip>
+        <InfoTooltip label={dictionary.explore.modules.routeDetails}>{dictionary.explore.routeDetailsHelp}</InfoTooltip>
       </div>
       {visibleCards.length === 0 ? (
         <p className="rounded-md bg-surface p-3 text-sm text-muted">{dictionary.explore.routeDetails.empty}</p>
@@ -64,8 +59,9 @@ export function RouteDetailCards({
             <RouteDetailCard
               dictionary={dictionary}
               includeDemo={includeDemo}
-              key={`${summary.route}-${selectedRange}-${routesKey}`}
+              key={`${summary.route}-${selectedRange}-${routesKey}-${problemsKey}`}
               locale={locale}
+              problemsKey={problemsKey}
               routesKey={routesKey}
               selectedRange={selectedRange}
               summary={summary}
@@ -83,6 +79,7 @@ function RouteDetailCard({
   locale,
   selectedRange,
   routesKey,
+  problemsKey,
   includeDemo,
 }: {
   summary: RouteSummary;
@@ -90,9 +87,9 @@ function RouteDetailCard({
   locale: Locale;
   selectedRange: TimeRange;
   routesKey: string;
+  problemsKey: string;
   includeDemo: boolean;
 }) {
-  const confidence = confidenceFromCount(summary.reports);
   const [expanded, setExpanded] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
   const [retryVersion, setRetryVersion] = useState(0);
@@ -107,6 +104,7 @@ function RouteDetailCard({
     const controller = new AbortController();
     const params = new URLSearchParams({ ruta_detalle: summary.route, rango: selectedRange });
     if (routesKey) params.set("ruta", routesKey);
+    if (problemsKey) params.set("problema", problemsKey);
     if (includeDemo) params.set("demo", "1");
     fetch(`/api/dashboard/route-detail?${params.toString()}`, { signal: controller.signal })
       .then(async (response) => {
@@ -119,7 +117,7 @@ function RouteDetailCard({
         if (!(error instanceof DOMException && error.name === "AbortError")) setStatus("error");
       });
     return () => controller.abort();
-  }, [hasRequested, retryVersion, routesKey, selectedRange, summary.route, includeDemo]);
+  }, [hasRequested, retryVersion, routesKey, problemsKey, selectedRange, summary.route, includeDemo]);
 
   function toggleExpanded() {
     setExpanded((current) => !current);
@@ -154,10 +152,6 @@ function RouteDetailCard({
           </dd>
         </div>
       </dl>
-      <div className="mt-3 flex items-center gap-1.5 text-xs">
-        <span className="text-muted">{dictionary.common.confidence}</span>
-        <ConfidenceBadge confidence={confidence} dictionary={dictionary} />
-      </div>
 
       <div className="mt-3 border-t border-border pt-3">
         <button
@@ -210,17 +204,5 @@ function RouteProblemsSkeleton({ label }: { label: string }) {
         <span aria-hidden="true" className="h-4 animate-pulse rounded-sm bg-border" key={index} style={{ width: `${70 - index * 15}%` }} />
       ))}
     </div>
-  );
-}
-
-function ConfidenceBadge({ confidence, dictionary }: { confidence: Confidence; dictionary: Dictionary }) {
-  const label = dictionary.common[confidence];
-  return (
-    <span
-      className="rounded-sm border border-border bg-surface px-1.5 py-0.5 font-semibold"
-      data-confidence={confidence}
-    >
-      {label}
-    </span>
   );
 }

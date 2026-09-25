@@ -17,7 +17,7 @@ San Pedro en Bus is a citizen-run PWA that collects crowdsourced problem reports
 The product has two primary actions:
 
 - Reportar: submit a report for the current trip with route, one or more problems, and an optional unit identifier.
-- Explorar: browse charts, route/unit detail, and confidence indicators built from those reports.
+- Explorar: browse charts, route/unit detail, and filters (route, problem, time range) built from those reports.
 
 A report is not one state chosen from a scale. It is **one or more problems** selected from a fixed catalogue, grouped into five categories:
 
@@ -29,7 +29,9 @@ A report is not one state chosen from a scale. It is **one or more problems** se
 
 There is no severity scale, no weighted score, and no single number that claims to summarize "how bad" a route is. Counts are plain and unweighted: how many reports, on which route, about which problems, over which range. The Termo de Madrid original this app was forked from built a weighted heat index; that entire mechanism is intentionally absent here.
 
-Reports are evidence, not absolute truth. Dashboards should show recency, confidence, and per-route breakdown. The product should let patterns emerge from real data (some routes will look worse) without hardcoding conclusions as facts.
+Reports are evidence, not absolute truth. Dashboards should show recency and per-route breakdown. The product should let patterns emerge from real data (some routes will look worse) without hardcoding conclusions as facts.
+
+The app does not compute or display a "confidence" score. It was dropped: with reporting still early and few reports accumulated, every report added mechanically lowers a naive sample-size confidence measure rather than validating anything, and no route or unit has enough history yet to earn a "high confidence" label that would mean anything. Report counts, latest-report recency, and the explicit low-volume caveat in the methodology copy carry that "this is early data" signal instead of a computed badge.
 
 Success means people can submit a report in seconds, understand the situation on their route at a glance, and share a concrete pattern of neglect that pressures the transit company to improve.
 
@@ -57,24 +59,34 @@ Avoid:
 - A dashboard that averages all routes into a harmless-looking network score.
 - Any weighted scoring index, decay model, or fleet-coverage percentage — this product counts plainly, on record in its own methodology copy.
 - A marketing-heavy landing page that delays the two main actions.
-- Open free-text comments in v1, because they increase moderation and abuse risk.
+- Open free-text comments *in the app's own reports table* in v1, because they increase moderation and abuse risk and would need their own validation/sanitization/moderation story. See "Open-ended reports" below for the narrow, deliberate exception.
 - GPS/location permission in v1, because it adds friction and most riders won't grant it mid-trip.
 - Offline submission in v1, because reports must represent current conditions.
 - Login, accounts, profiles, or public user identities.
 
-## Design Principles
+### Open-ended reports
+
+Riders sometimes have something to report that doesn't fit the fixed 16-problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (currently a placeholder Google Form URL in `report-form.tsx`, pending the real link) for that kind of report.
+
+This form is intentionally outside the app's own data model:
+
+- It is not wired into the reports API, the reports table, or duplicate/rate-limit logic.
+- Submissions through it are **not** counted in any dashboard chart, aggregate, or per-route/per-problem total — the "counts are plain and unweighted" promise above only ever applies to the fixed-catalogue reports table.
+- If these open-ended submissions are ever surfaced in the product (e.g. a lightweight list on /explorar with date, route, and comment), they must be visually and structurally separate from the counted statistics, never blended into them, and still respect the no-PII/no-accounts rules above.
+
+
 
 1. Never let one route hide behind an average.
    The dashboard leads with per-route report volume. Route-level detail, per-route problem breakdown, and unit-level evidence stay prominent; there is no single network-wide score to lead with instead.
 
 2. Treat reports as signals, not verdicts.
-   Use recency, confidence, and sample size to communicate uncertainty honestly. A route with 3 reports this week is not the same claim as one with 30.
+   Use recency and raw report counts to communicate uncertainty honestly — show the numbers plainly (a route with 3 reports this week vs. one with 30) rather than collapsing them into a computed confidence label.
 
 3. Keep reporting fast enough for someone standing on a moving bus.
    Route and at least one problem are the only required fields. Unit is optional — either a unit number or a licence plate, whichever the rider actually noticed. Avoid dates, comments, accounts, and location prompts. When a user submits without a unit identifier, confirm the choice and offer a direct return to the unit field before sending.
 
 4. Be honest about what the data is and isn't.
-   Clearly label confidence levels and the citizen-run, non-official nature of the project. This is a tracking tool, not an emergency-services channel, and the copy should not imply otherwise.
+   Show recency and report counts plainly, and be explicit that the project is early and low-volume, and about the citizen-run, non-official nature of the project. This is a tracking tool, not an emergency-services channel, and the copy should not imply otherwise.
 
 5. Accept some false rejections in exchange for simplicity.
    Duplicate suppression and rate limiting favor stopping spam over guaranteeing every distinct report survives. A future stronger bot-check (for example, a Cloudflare-fronted human-verification layer) is an open idea, not a v1 requirement.
@@ -115,9 +127,9 @@ Users should be reminded lightly near submission to report only what they are ex
 V1 routes:
 
 - Home: compact civic landing with title, mission sentence, two visible actions, live snapshot, and disclaimer.
-- /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, five categories), optional unit field, and success feedback.
-- /explorar: dashboard with route and time-range filters, charts, confidence indicators, unit/route detail.
-- /metodologia: lightweight methodology, privacy, abuse-control, and confidence explanation, plus the affiliation disclaimer and origin-project attribution.
+- /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, five categories), optional unit field, success feedback, and an outbound link to an external open-text form for anything that doesn't fit the fixed catalogue (see "Open-ended reports" below).
+- /explorar: dashboard with route, problem, and time-range filters, charts, unit/route detail.
+- /metodologia: lightweight methodology, privacy, abuse-control, and low-volume-data explanation, plus the affiliation disclaimer and origin-project attribution.
 
 V1 dashboard modules — the six questions the dashboard must answer, and nothing framed as a single score:
 
@@ -126,7 +138,7 @@ V1 dashboard modules — the six questions the dashboard must answer, and nothin
 3. Reports per problem category, as a more scannable rollup of the above.
 4. Report volume over time, for the selected range.
 5. Most-reported units, ranked, linking into a unit explorer with total reports, routes served, and history.
-6. Per-route detail: report count, units reported, latest report, and confidence.
+6. Per-route detail: report count, units reported, and latest report.
 
 Time ranges:
 

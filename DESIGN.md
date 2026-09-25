@@ -196,12 +196,12 @@ Five categories, used only for the reports-per-category dashboard module — nev
 - **Headline** (650, 1.5rem, 1.12): Dashboard module headings, route titles, and major empty states.
 - **Title** (620, 1rem, 1.25): Card titles, form group labels, chart captions, and table headings.
 - **Body** (400, 0.9375rem, 1.5): Descriptions, methodology, and summaries. Cap prose around 65-75ch.
-- **Label** (580, 0.8125rem, 1.2): Buttons, chips, control labels, confidence labels, and compact legends. Do not use all-caps tracking as a default style.
+- **Label** (580, 0.8125rem, 1.2): Buttons, chips, control labels, filter labels, and compact legends. Do not use all-caps tracking as a default style.
 - **Data** (560, 0.875rem, 1.25): Unit identifiers, timestamps, numeric counts, ranges, and table values. Use tabular numbers.
 
 ### Named Rules
 
-**The Data First Rule.** Numbers, route names, unit identifiers, and confidence labels must align cleanly and use tabular settings. If a chart label wraps badly on mobile, wrap or shorten the label before shrinking the type below readable size — see the 16-problem chart's wrapped-tick approach in `dashboard-charts.tsx`.
+**The Data First Rule.** Numbers, route names, and unit identifiers must align cleanly and use tabular settings. If a chart label wraps badly on mobile, wrap or shorten the label before shrinking the type below readable size — see the 16-problem chart's wrapped-tick approach in `dashboard-charts.tsx`.
 
 **The No Display Labels Rule.** Buttons, nav items, chips, form controls, and chart labels always use the UI scale, never display typography.
 
@@ -273,9 +273,9 @@ Dashboard modules are evidence blocks, not generic metric cards. The fixed modul
 4. **Report volume over time** — line chart for the selected range, with a computed tick interval so long ranges (`Todo`, hundreds of daily buckets) don't produce overlapping date labels.
 5. **Most-reported units** — ranked list, clicking a row opens the unit explorer below.
 6. **Unit explorer** — search or select a reported unit; show total reports, routes it runs, and a history chart for the active range.
-7. **Route detail cards** — per-route reports, units reported, latest report, and a confidence badge. (Per-route problem breakdown inside these cards is planned but not yet wired — `makeover.md` P12.)
+7. **Route detail cards** — per-route reports, units reported, and latest report. (Per-route problem breakdown inside these cards is planned but not yet wired — `makeover.md` P12.)
 
-There is no Termo Indicator, fleet-coverage percentage, or any other weighted score. Modules should include compact helper tooltips for confidence and range definitions where useful, per the Do's/Don'ts below.
+There is no Termo Indicator, fleet-coverage percentage, confidence score, or any other weighted/computed metric. Modules should include compact helper tooltips for range definitions and other methodology details where useful, per the Do's/Don'ts below.
 
 ### Logo / App Icon
 
@@ -290,7 +290,6 @@ The current mark (a red diamond behind a blue thermometer, inherited from Termo 
 - **Do** keep the dashboard vertical on mobile; no chart carousel for v1.
 - **Do** make every major dashboard module screenshot-friendly with title, range, legend, data, and takeaway.
 - **Do** use tooltips/help popovers for methodology details instead of bloating the main UI with explanatory text.
-- **Do** show confidence as simple labels (`baja`, `media`, `alta`) with tap/hover explanation.
 - **Do** distinguish route-identity colors from problem-category colors.
 - **Do** include the mandatory disclaimer: `Proyecto ciudadano, no afiliado a ninguna empresa de transporte`
 - **Do** keep Spanish copy complete and centralized in the locale dictionary, even with one locale live.
@@ -307,7 +306,7 @@ The current mark (a red diamond behind a blue thermometer, inherited from Termo 
 - **Don't** combine a 1px card border with soft shadows above 8px blur.
 - **Don't** use colored side-stripe borders thicker than 1px on cards, list items, alerts, or callouts.
 - **Don't** use gradient text, decorative grid backgrounds, repeating stripe backgrounds, or tiny uppercase tracked eyebrows as section scaffolding.
-- **Don't** expose open free-text comments in v1.
+- **Don't** expose open free-text comments in the app's own reports data model (see PRODUCT.md's "Open-ended reports" exception for the external-form workaround).
 - **Don't** request GPS/location permission in v1.
 - **Don't** support offline submission in v1.
-- **Don't** hide confidence caveats when a metric is based on a small sample.
+- **Don't** reintroduce a computed confidence/trust score; use plain report counts and recency instead.

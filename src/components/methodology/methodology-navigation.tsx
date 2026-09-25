@@ -10,7 +10,6 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 export const METHODOLOGY_SECTIONS = [
   { id: "mission", labelKey: "missionTitle" },
   { id: "score", labelKey: "scoreTitle" },
-  { id: "confidence", labelKey: "confidenceTitle" },
   { id: "fleet", labelKey: "fleetTitle" },
 ] as const;
 

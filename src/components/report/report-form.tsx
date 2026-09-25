@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { TriangleAlert } from "lucide-react";
+import { SquareArrowOutUpRight, TriangleAlert } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,12 @@ import type { Locale } from "@/lib/i18n/config";
 import { ProblemSelector } from "./problem-selector";
 import { clearReportCooldown, getReportCooldownRemainingMs, markReportSubmitted, REPORT_COOLDOWN_MS } from "./report-cooldown";
 import { RoutePicker } from "./route-picker";
+
+// TODO: replace with the real Google Form link before shipping this feature.
+// This form is for open-ended reports that don't fit the fixed 16-problem
+// catalogue -- it's intentionally external and not wired into the reports
+// API or the statistics dashboard (see PRODUCT.md).
+const OPEN_REPORT_FORM_URL = "https://forms.google.com/REPLACE_WITH_REAL_FORM_ID";
 
 type ApiErrorReason = "duplicate" | "invalid" | "rate_limited" | "server_error";
 
@@ -166,6 +172,19 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
       <p className="flex items-start gap-2 rounded-md border border-border bg-surface px-3 py-2 text-[0.6875rem] leading-4 text-muted/85">
         <TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-muted/85" />
         <span>{dictionary.reportForm.abuseReminder}</span>
+      </p>
+
+      <p className="text-xs leading-5 text-muted">
+        {dictionary.reportForm.openReportPrompt}{" "}
+        <a
+          className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-2 transition-colors hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          href={OPEN_REPORT_FORM_URL}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {dictionary.reportForm.openReportLink}
+          <SquareArrowOutUpRight aria-hidden="true" className="size-3" />
+        </a>
       </p>
 
       {problems.length === 0 ? <p className="text-xs text-muted">{dictionary.reportForm.invalid}</p> : null}

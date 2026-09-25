@@ -49,6 +49,14 @@ export function parseReportInput(input: unknown) {
   return reportInputSchema.safeParse(input);
 }
 
+// Shared by the Supabase and in-memory dashboard paths so "filter by problem"
+// means the same thing (any overlap, not "contains all selected problems")
+// everywhere it's applied.
+export function reportMatchesProblems(report: Pick<Report, "problems">, selectedProblems: Problem[]): boolean {
+  if (selectedProblems.length === 0) return true;
+  return report.problems.some((problem) => selectedProblems.includes(problem));
+}
+
 export function isDuplicateCandidate(
   current: ReportInput,
   previous: Report,

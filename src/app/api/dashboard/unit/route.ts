@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseDashboardRange, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
+import { parseDashboardRange, parseSelectedProblems, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
 import { normalizeUnitCode } from "@/lib/domain/reports";
 import { getCachedUnitDetail, normalizeDashboardCacheKey } from "@/lib/server/dashboard-cache";
 
@@ -11,10 +11,11 @@ export async function GET(request: Request) {
   const key = normalizeDashboardCacheKey({
     range: parseDashboardRange(params.get("rango")),
     routes: parseSelectedRoutes(params.get("ruta")),
+    problems: parseSelectedProblems(params.get("problema")),
   });
   const includeDemo = params.get("demo") === "1";
   try {
-    const selection = await getCachedUnitDetail(key.rangeKey, key.routesKey, unit, includeDemo);
+    const selection = await getCachedUnitDetail(key.rangeKey, key.routesKey, key.problemsKey, unit, includeDemo);
     return NextResponse.json({ selection }, { status: selection ? 200 : 404 });
   } catch (error) {
     console.error("Failed to load unit dashboard detail", error);

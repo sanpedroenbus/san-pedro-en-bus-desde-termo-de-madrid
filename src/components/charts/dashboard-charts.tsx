@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { type UnitExplorerOption, type UnitExplorerSelection, type DashboardData } from "@/lib/domain/dashboard";
 import { CHART_TOKENS, SERIES_CHART_COLORS } from "@/lib/design/tokens";
 import { ROUTE_COLORS, ROUTE_LABELS, type Route } from "@/lib/domain/routes";
-import type { ProblemCategory } from "@/lib/domain/problems";
+import type { Problem, ProblemCategory } from "@/lib/domain/problems";
 import type { TimeRange } from "@/lib/domain/ranges";
 import { normalizeUnitCode } from "@/lib/domain/reports";
 import { getProblemLabel } from "@/components/report/problem-label";
@@ -205,11 +205,13 @@ export function UnitsExplorerChartCards({
   selectedRange,
   initialUnit,
   routes,
+  problems,
   includeDemo = false,
 }: Omit<ChartModuleBaseProps, "selectedRoutes"> & {
   data: { unitExplorer: { options: UnitExplorerOption[] } };
   initialUnit?: string | null;
   routes: Route[];
+  problems: Problem[];
   includeDemo?: boolean;
 }) {
   const initialSelectionUnit = initialUnit ?? data.unitExplorer.options[0]?.unit ?? null;
@@ -219,12 +221,14 @@ export function UnitsExplorerChartCards({
   const [loadError, setLoadError] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
   const routesKey = routes.join(",");
+  const problemsKey = problems.join(",");
 
   useEffect(() => {
     if (!selectedUnit) return;
     const controller = new AbortController();
     const params = new URLSearchParams({ unidad: selectedUnit, rango: selectedRange });
     if (routesKey) params.set("ruta", routesKey);
+    if (problemsKey) params.set("problema", problemsKey);
     if (includeDemo) params.set("demo", "1");
     fetch(`/api/dashboard/unit?${params.toString()}`, { signal: controller.signal })
       .then(async (response) => {
@@ -239,7 +243,7 @@ export function UnitsExplorerChartCards({
         if (!controller.signal.aborted) setIsChartPending(false);
       });
     return () => controller.abort();
-  }, [routesKey, requestVersion, selectedUnit, selectedRange, includeDemo]);
+  }, [routesKey, problemsKey, requestVersion, selectedUnit, selectedRange, includeDemo]);
 
   function selectUnit(unit: string) {
     setActiveSelection(null);

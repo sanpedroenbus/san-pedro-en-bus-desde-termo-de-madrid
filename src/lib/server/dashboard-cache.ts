@@ -1,6 +1,6 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { parseSelectedRoutes } from "@/lib/domain/dashboard-query";
+import { parseSelectedProblems, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
 import { isTimeRange, type TimeRange } from "@/lib/domain/ranges";
 import type { Route } from "@/lib/domain/routes";
 import {
@@ -23,12 +23,12 @@ export async function getCachedHomeSnapshot(includeDemo = false) {
   return getHomeSnapshot(new Date(), includeDemo);
 }
 
-export async function getCachedExplorePageData(rangeKey: string, routesKey: string, includeDemo = false) {
+export async function getCachedExplorePageData(rangeKey: string, routesKey: string, problemsKey: string, includeDemo = false) {
   "use cache";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(REPORTS_CACHE_TAG);
 
-  const search = parseSearch(rangeKey, routesKey, includeDemo);
+  const search = parseSearch(rangeKey, routesKey, problemsKey, includeDemo);
   const now = new Date();
   const [routeSummaries, problemSummaries, unitExplorer, trend] = await Promise.all([
     getRouteSummariesModule(search, now),
@@ -45,29 +45,31 @@ export async function getCachedExplorePageData(rangeKey: string, routesKey: stri
   };
 }
 
-export async function getCachedUnitDetail(rangeKey: string, routesKey: string, unit: string, includeDemo = false) {
+export async function getCachedUnitDetail(rangeKey: string, routesKey: string, problemsKey: string, unit: string, includeDemo = false) {
   "use cache";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(REPORTS_CACHE_TAG);
-  return getUnitDetailModule(parseSearch(rangeKey, routesKey, includeDemo), unit);
+  return getUnitDetailModule(parseSearch(rangeKey, routesKey, problemsKey, includeDemo), unit);
 }
 
-export async function getCachedRouteDetail(rangeKey: string, routesKey: string, route: Route, includeDemo = false) {
+export async function getCachedRouteDetail(rangeKey: string, routesKey: string, problemsKey: string, route: Route, includeDemo = false) {
   "use cache";
   cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   cacheTag(REPORTS_CACHE_TAG);
-  return getRouteDetailModule(parseSearch(rangeKey, routesKey, includeDemo), route);
+  return getRouteDetailModule(parseSearch(rangeKey, routesKey, problemsKey, includeDemo), route);
 }
 
-export function normalizeDashboardCacheKey(search: Pick<DashboardModuleSearch, "range" | "routes">) {
+export function normalizeDashboardCacheKey(search: Pick<DashboardModuleSearch, "range" | "routes" | "problems">) {
   return {
     rangeKey: search.range,
     routesKey: [...new Set(search.routes)].toSorted().join(","),
+    problemsKey: [...new Set(search.problems)].toSorted().join(","),
   };
 }
 
-function parseSearch(rangeKey: string, routesKey: string, includeDemo: boolean): DashboardModuleSearch {
-  const range: TimeRange = isTimeRange(rangeKey) ? rangeKey : "all";
+function parseSearch(rangeKey: string, routesKey: string, problemsKey: string, includeDemo: boolean): DashboardModuleSearch {
+  const range: TimeRange = isTimeRange(rangeKey) ? rangeKey : "thirtyDays";
   const routes = parseSelectedRoutes(routesKey);
-  return { range, routes, includeDemo };
+  const problems = parseSelectedProblems(problemsKey);
+  return { range, routes, problems, includeDemo };
 }
