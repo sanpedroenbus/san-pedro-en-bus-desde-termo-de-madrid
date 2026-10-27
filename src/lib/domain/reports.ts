@@ -17,11 +17,16 @@ export const RATE_LIMIT_WINDOW_MINUTES = 10;
 export const RATE_LIMIT_MAX_REPORTS = 4;
 export const UNDO_WINDOW_SECONDS = 90;
 
-// A unit code is either a bus unit number ("51", "099") or a full licence
-// plate ("SJB1234") — both are accepted in the same field. Normalized to
-// uppercase alphanumeric with all whitespace stripped, 1-10 characters.
-const UNIT_CODE_MAX_LENGTH = 10;
-const UNIT_CODE_PATTERN = /^[A-Z0-9]{1,10}$/;
+// A unit code is either a bus unit number (1-3 digits, "51") or a licence
+// plate. Every plate on these routes starts with "SJB" and only the digits
+// identify the bus, so the prefix is optional on input and plates are stored
+// as "SJB" + digits without leading zeros: "SJB 014285", "sjb-14285" and
+// "14285" all become "SJB14285". 4-6 digits is a plate, 1-3 a unit number.
+const PLATE_PREFIX = "SJB";
+const UNIT_INPUT_PATTERN = /^(SJB)?(\d+)$/;
+const UNIT_NUMBER_MAX_DIGITS = 3;
+const PLATE_MIN_DIGITS = 4;
+const PLATE_MAX_DIGITS = 6;
 
 export const reportInputSchema = z.object({
   route: z.string().refine(isRoute),
@@ -38,11 +43,13 @@ export const reportInputSchema = z.object({
 export type ReportInput = z.infer<typeof reportInputSchema>;
 
 export function normalizeUnitCode(value: string): string | null {
-  const stripped = value.replace(/\s+/g, "").toUpperCase();
-  if (!stripped) return null;
-  if (stripped.length > UNIT_CODE_MAX_LENGTH) return null;
-  if (!UNIT_CODE_PATTERN.test(stripped)) return null;
-  return stripped;
+  const match = UNIT_INPUT_PATTERN.exec(value.replace(/[\s.-]+/g, "").toUpperCase());
+  if (!match) return null;
+  const [, prefix, rawDigits] = match;
+  const digits = rawDigits.replace(/^0+/, "");
+  if (digits.length >= PLATE_MIN_DIGITS && digits.length <= PLATE_MAX_DIGITS) return PLATE_PREFIX + digits;
+  if (!prefix && digits.length >= 1 && digits.length <= UNIT_NUMBER_MAX_DIGITS) return digits;
+  return null;
 }
 
 export function parseReportInput(input: unknown) {

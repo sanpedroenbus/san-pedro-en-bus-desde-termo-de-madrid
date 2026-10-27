@@ -68,7 +68,7 @@ export function ChartCard({
   }
 
   return (
-    <section className="scroll-mt-[13rem] rounded-md border border-border bg-surface-raised p-4" id={id} ref={cardRef}>
+    <section className="scroll-mt-[13rem] rounded-md tabular-nums border border-border bg-surface-raised p-4" id={id} ref={cardRef}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function ChartCard({
         <Button
           aria-busy={isSharing}
           aria-label={`${isSharing ? dictionary.common.sharePreparing : dictionary.common.shareCard}: ${title}`}
-          className="share-button grid size-9 min-h-0 place-items-center px-0 py-0"
+          className="share-button hit-slop grid size-9 min-h-0 place-items-center px-0 py-0"
           data-share-exclude="true"
           disabled={isSharing}
           onClick={shareModule}

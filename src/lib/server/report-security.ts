@@ -5,9 +5,10 @@ import {
   UNDO_WINDOW_SECONDS,
 } from "../domain/reports";
 
+// IP only: a user agent is client-controlled, so mixing it in let a script
+// rotate it to get a fresh rate-limit budget per request.
 export type RequestFingerprint = {
   ip: string;
-  userAgent: string;
 };
 
 export const RATE_LIMIT_WINDOW_MS = RATE_LIMIT_WINDOW_MINUTES * 60_000;
@@ -35,7 +36,6 @@ export function getRequestFingerprint(request: Request): RequestFingerprint {
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return {
     ip: forwardedFor || request.headers.get("x-real-ip") || "local",
-    userAgent: request.headers.get("user-agent") || "unknown",
   };
 }
 
@@ -44,8 +44,6 @@ export function createAbuseKey(fingerprint: RequestFingerprint) {
     .update(getAbuseSecret())
     .update(":abuse:")
     .update(fingerprint.ip)
-    .update(":")
-    .update(fingerprint.userAgent)
     .digest("hex");
 }
 

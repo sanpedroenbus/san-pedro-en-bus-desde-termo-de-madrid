@@ -203,6 +203,8 @@ Five categories, used only for the reports-per-category dashboard module — nev
 
 **The Data First Rule.** Numbers, route names, and unit identifiers must align cleanly and use tabular settings. If a chart label wraps badly on mobile, wrap or shorten the label before shrinking the type below readable size — see the 16-problem chart's wrapped-tick approach in `dashboard-charts.tsx`.
 
+**The Balanced Wrap Rule.** Headings use `text-wrap: balance` and paragraphs `text-wrap: pretty` (set once in `globals.css` base layer) so lines break evenly for glance reading on the move.
+
 **The No Display Labels Rule.** Buttons, nav items, chips, form controls, and chart labels always use the UI scale, never display typography.
 
 ## 4. Elevation
@@ -235,6 +237,7 @@ The system is flat by default. Depth comes from tonal layering, borders, spacing
 
 - **Route Chips:** Fixed-size compact buttons, 9 across a 2-column grid on mobile. Unselected chips use neutral background, route-colored dot/short bar, ink label, and border. Selected chips use route-color fill, contrast-correct text, check icon, and strong outline.
 - **Range Chips:** Neutral segmented controls for `Hoy`, `7 días`, `30 días`, `Todo`. Selected state uses Civic Green or neutral dark fill, not a route or category color.
+- **Tap Targets:** Chips and form choices are at least `--tap-target` (44px) tall — the app is used one-handed on a moving bus. Controls that must stay visually small (the `?` help trigger, chart share button) get the `.hit-slop` class, which extends the touch area invisibly by `--hit-slop` on every side.
 
 ### Cards / Containers
 
@@ -281,7 +284,19 @@ There is no Termo Indicator, fleet-coverage percentage, confidence score, or any
 
 The current mark (a red diamond behind a blue thermometer, inherited from Termo de Madrid) is a placeholder pending a San Pedro en Bus-specific identity (`makeover.md` P5). No logo motion.
 
-## 6. Do's and Don'ts
+## 6. Layout Principles
+
+The app is read one-handed on a moving bus. Layout serves glanceability first: one column, big targets, numbers that line up.
+
+- **Single column, centered.** Every page is one vertical column centered with `mx-auto` and `px-4` gutters. Widths by page: report form `max-w-xl`, home content `max-w-xl` inside a `max-w-5xl` section, explore and methodology `max-w-3xl`, the header panel `max-w-5xl`. Prose inside a column caps at `max-w-md`/`max-w-2xl` (about 65-75ch).
+- **Spacing scale.** Use the `--space-*` tokens (4, 8, 12, 16, 24, 32px) or their Tailwind equivalents (`gap-1`…`gap-8`). Stack sections with `gap-5`/`gap-3`; pad cards with 16px. No one-off pixel values.
+- **Stacking order.** `--z-sticky` (30) for the sticky filter bar, `--z-popover` (50) for popovers, `--z-modal` (60) for the header drawer and dialogs. Never use raw z-index numbers.
+- **Sticky chrome.** The header is sticky at the top; the explore filter bar sticks below it at `top-[80px]`. Anchor-linked sections set `scroll-mt-*` so they land below both.
+- **Tap targets.** Anything tappable is at least `--tap-target` (44px) tall, or uses `.hit-slop` to reach it invisibly (see Chips). Adjacent targets keep at least a 6px gap so a bump doesn't hit the neighbour.
+- **Let CSS lay out.** Use flex, grid and intrinsic sizing; do not measure the DOM in JavaScript for layout (the header drawer height animation is the one documented exception).
+- **Text never clips.** Chips and labels wrap rather than overflow or truncate; long problem labels wrap inside filter chips. Truncate only with a full-value path (title or detail view).
+
+## 7. Do's and Don'ts
 
 ### Do:
 
@@ -301,7 +316,7 @@ The current mark (a red diamond behind a blue thermometer, inherited from Termo 
 - **Don't** lead with a single network average that hides a bad route.
 - **Don't** reintroduce a weighted scoring index, time decay, or fleet-coverage percentage.
 - **Don't** rank or color-code the 16 problems by severity in the report form.
-- **Don't** use glassmorphism as a default surface treatment.
+- **Don't** use glassmorphism or `backdrop-filter` blur on any surface — it is also a GPU cost on low-end phones.
 - **Don't** use border radii above 16px on cards, panels, or inputs.
 - **Don't** combine a 1px card border with soft shadows above 8px blur.
 - **Don't** use colored side-stripe borders thicker than 1px on cards, list items, alerts, or callouts.
@@ -310,3 +325,27 @@ The current mark (a red diamond behind a blue thermometer, inherited from Termo 
 - **Don't** request GPS/location permission in v1.
 - **Don't** support offline submission in v1.
 - **Don't** reintroduce a computed confidence/trust score; use plain report counts and recency instead.
+
+## 8. Responsive Behavior
+
+- **Mobile first.** Base styles target a ~360-412px phone in portrait. That is the primary device; desktop is a wider view of the same column, not a different layout.
+- **Breakpoints.** Tailwind defaults only: `sm` (640px) loosens type and spacing (for example `sm:text-base`, `sm:pt-12`) and shows icon-button labels; `lg` (1024px) is used only for the route-detail card grid (`sm:grid-cols-2 lg:grid-cols-3`). Do not add custom breakpoints.
+- **Inputs are 16px or larger** on mobile, so iOS Safari does not zoom on focus. Never block browser zoom.
+- **Safe areas.** The app does not set `viewport-fit=cover` and has no bottom-fixed UI, so the browser keeps content clear of notches. If either changes, pad with `env(safe-area-inset-*)`.
+- **Charts** stay vertical and full-width on mobile; long labels wrap rather than shrink (see the Data First Rule).
+- **Motion and performance.** No backdrop blur, no large animated backgrounds; keep continuous animations off the main reading path. All motion respects `prefers-reduced-motion`.
+- **Verify** every UI change at a Pixel 7-sized mobile viewport and at desktop, in light and dark, with Playwright screenshots (see AGENTS.md).
+
+## 9. Agent Prompt Guide
+
+Quick references for an agent building UI in this repo. Tokens live in `src/app/globals.css` (CSS variables, OKLCH) and `src/lib/design/tokens.ts` (chart and social-image tokens).
+
+- **Colors:** background `var(--background)`, cards `var(--surface-raised)`, ink `var(--foreground)`, secondary text `var(--muted)`, borders `var(--border)`, primary action `var(--primary)`. Route colors come from `ROUTE_COLORS` and are only for identifying routes. Category colors come from `CATEGORY_COLORS` and are only for problem categories.
+- **Components to reuse before writing new ones:** `Button` (variants via CVA), `RouteBadge`, `InfoTooltip`, `ChartCard`, `StickyUtilityBar`, `CenteredPopoverPanel`, `RoutePicker`, `ProblemSelector`.
+- **Copy:** every user-facing string goes in `src/lib/i18n/messages/es.ts`.
+
+Example prompts:
+
+- "Add a card to /explorar using `ChartCard`, 16px padding, `rounded-md`, `tabular-nums` for counts, title in the Title style, and a one-line takeaway in `text-muted`. Strings go in `es.ts`."
+- "Add a filter chip group: reuse the `.filter-swatch` chip classes, min 44px tall, neutral when unselected, `var(--accent)` fill when selected, route dot only for route chips."
+- "Add a help hint next to a form label: use `InfoTooltip` (it already has `.hit-slop`), and put the explanation in the tooltip, not the label."

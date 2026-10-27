@@ -10,7 +10,7 @@
   --border: oklch(0.86 0.014 96);
   --page-glow: oklch(0.89 0.055 78 / 0.64);
   --nav-surface: oklch(1 0.003 96 / 0.94);
-  --drawer-surface: oklch(0.997 0.006 96 / 0.96);
+  --drawer-surface: oklch(0.997 0.006 96);
   --action-report-border: oklch(0.59 0.21 32 / 0.62);
   --action-report-sheen: oklch(1 0 0 / 0.28);
   --accent: oklch(0.72 0.165 72);
@@ -49,6 +49,8 @@
   --space-lg: 16px;
   --space-xl: 24px;
   --space-xxl: 32px;
+  --tap-target: 44px;
+  --hit-slop: var(--space-md);
   --filter-swatch-font-size: 15px;
   --duration-fast: 150ms;
   --duration-base: 200ms;
@@ -72,7 +74,7 @@
   --border: oklch(0.36 0.04 248);
   --page-glow: oklch(0.34 0.075 245 / 0.5);
   --nav-surface: oklch(0.19 0.04 250 / 0.9);
-  --drawer-surface: oklch(0.16 0.036 252 / 0.94);
+  --drawer-surface: oklch(0.16 0.036 252);
   --action-report-border: oklch(0.65 0.2 35 / 0.7);
   --action-report-sheen: oklch(1 0 0 / 0.22);
   --accent: oklch(0.74 0.15 76);
@@ -132,6 +134,27 @@ body {
   color: var(--foreground);
   font-family: "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
   text-rendering: optimizeLegibility;
+}
+
+@layer base {
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+/* Invisible tap-area extension for small controls; ::before so it doesn't clash with ::after effects. */
+.hit-slop {
+  position: relative;
+}
+
+.hit-slop::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--hit-slop) * -1);
 }
 
 .home-report-action {
@@ -307,7 +330,17 @@ body {
 
 .filter-swatch {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-target);
   white-space: nowrap;
+}
+
+/* Long problem labels must wrap instead of overflowing the filter panel. */
+.filter-swatch-wrap {
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .centered-popover {

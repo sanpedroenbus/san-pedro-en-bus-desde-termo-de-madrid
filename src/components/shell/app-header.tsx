@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
-import { CircleHelp, Home } from "lucide-react";
+import { CircleHelp, Clock, Home } from "lucide-react";
 import { AppLogo } from "@/components/ui/app-logo";
 import { ExploreActionIcon, ReportActionIcon } from "@/components/ui/action-icons";
 import { ThemeSegmentedSwitch } from "./theme-toggle";
@@ -27,6 +27,7 @@ export function AppHeader({
     { href: `/${locale}`, label: dictionary.common.home, icon: Home, path: "" },
     { href: `/${locale}/reportar`, label: dictionary.common.report, icon: ReportActionIcon, path: "/reportar", iconClassName: "text-heat-infierno" },
     { href: `/${locale}/explorar`, label: dictionary.common.explore, icon: ExploreActionIcon, path: "/explorar", iconClassName: "h-4 w-5 scale-[0.67]" },
+    { href: `/${locale}/horarios`, label: dictionary.common.schedules, icon: Clock, path: "/horarios" },
     {
       href: `/${locale}/metodologia`,
       label: dictionary.common.methodology,
@@ -46,7 +47,7 @@ export function AppHeader({
       <div
         className={cn(
           "fixed inset-0 transition duration-[var(--duration-drawer)] ease-out",
-          isOpen ? "pointer-events-auto bg-background/70 opacity-100 backdrop-blur-sm" : "pointer-events-none bg-transparent opacity-0 backdrop-blur-0",
+          isOpen ? "pointer-events-auto bg-background/70 opacity-100" : "pointer-events-none bg-transparent opacity-0",
         )}
         aria-hidden={!isOpen}
         onClick={() => setIsOpen(false)}
@@ -55,7 +56,7 @@ export function AppHeader({
       </div>
 
       <div
-        className="relative mx-auto max-h-[calc(100dvh-2rem)] max-w-5xl overflow-hidden rounded-lg border border-border bg-[var(--drawer-surface)] shadow-[var(--shadow-popover)] backdrop-blur-2xl transition-[height,background-color] duration-[var(--duration-drawer)] ease-out supports-[backdrop-filter]:bg-[var(--drawer-surface)]"
+        className="relative mx-auto max-h-[calc(100dvh-2rem)] max-w-5xl overflow-hidden rounded-lg border border-border bg-[var(--drawer-surface)] shadow-[var(--shadow-popover)] transition-[height,background-color] duration-[var(--duration-drawer)] ease-out"
         style={panelHeight === null ? undefined : { height: `${panelHeight}px` }}
       >
         <div className="px-3 py-2" ref={topRowRef}>

@@ -15,9 +15,14 @@ const migrationPath = join(root, "supabase/migrations/0001_initial.sql");
 const migration = readFileSync(migrationPath, "utf8");
 
 describe("Supabase migration: 0001_initial.sql", () => {
-  it("is the single active migration (old Metro de Madrid migrations are archived, not applied)", () => {
+  it("is the base of the active migrations (old Metro de Madrid migrations are archived, not applied)", () => {
     const activeMigrations = readdirSync(join(root, "supabase/migrations")).filter((file) => file.endsWith(".sql"));
-    expect(activeMigrations).toEqual(["0001_initial.sql"]);
+    expect(activeMigrations).toEqual([
+      "0001_initial.sql",
+      "0002_create_report_no_unit_origin_window.sql",
+      "0003_retire_no_paso_google_maps.sql",
+      "0004_ramp_problem_and_unit_normalization.sql",
+    ]);
   });
 
   it("defines a reports table with a route CHECK constraint covering every current route and no others", () => {
@@ -29,11 +34,8 @@ describe("Supabase migration: 0001_initial.sql", () => {
     expect(listedRoutes).toHaveLength(ROUTES.length);
   });
 
-  it("requires at least one problem and only allows known problem ids", () => {
+  it("requires at least one problem", () => {
     expect(migration).toContain("cardinality(problems) > 0");
-    for (const problem of PROBLEMS) {
-      expect(migration).toContain(`'${problem}'`);
-    }
   });
 
   it("accepts short numeric bus unit codes as well as plate-like codes, not the old Metro car regex", () => {
@@ -125,5 +127,69 @@ describe("Supabase migration: 0001_initial.sql", () => {
     expect(migration).not.toMatch(/'L\d{1,2}'/);
     expect(migration).not.toContain("line_fleet_estimates");
     expect(migration.toLowerCase()).not.toContain("termo indicator");
+  });
+});
+
+describe("Supabase migration: 0002_create_report_no_unit_origin_window.sql", () => {
+  const migration0002 = readFileSync(join(root, "supabase/migrations/0002_create_report_no_unit_origin_window.sql"), "utf8");
+  const signature = "text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz";
+
+  it("adds the new signature alongside the old one so applying it can't break the deployed app", () => {
+    expect(migration0002).not.toContain("drop function");
+    expect(migration0002).toContain("input_no_unit_window_start timestamptz\n)");
+  });
+
+  it("limits no-unit reports per abuse key across all routes, after rate limiting and before route duplicates", () => {
+    const rateLimitIndex = migration0002.indexOf("v_recent_count >= input_rate_limit_max");
+    const originWindowIndex = migration0002.indexOf("r.created_at >= input_no_unit_window_start");
+    const duplicateIndex = migration0002.indexOf("v_duplicate_id is not null");
+    expect(rateLimitIndex).toBeGreaterThan(-1);
+    expect(originWindowIndex).toBeGreaterThan(rateLimitIndex);
+    expect(duplicateIndex).toBeGreaterThan(originWindowIndex);
+    expect(migration0002).toContain("input_unit is null and exists");
+    expect(migration0002).toContain("r.abuse_key = input_abuse_key");
+  });
+
+  it("keeps create_report restricted to the service role", () => {
+    expect(migration0002).toContain(`revoke all on function public.create_report(${signature}) from public;`);
+    expect(migration0002).toContain(`revoke execute on function public.create_report(${signature}) from anon, authenticated;`);
+    expect(migration0002).toContain(`grant execute on function public.create_report(${signature}) to service_role;`);
+  });
+});
+
+describe("Supabase migration: 0003_retire_no_paso_google_maps.sql", () => {
+  const migration0003 = readFileSync(join(root, "supabase/migrations/0003_retire_no_paso_google_maps.sql"), "utf8");
+
+  it("is no longer part of the app's problem catalogue", () => {
+    expect(PROBLEMS).not.toContain("no_paso_google_maps");
+  });
+
+  it("hides (never deletes) reports whose only problem was the retired one, and strips it from the rest", () => {
+    expect(migration0003).not.toMatch(/delete from/i);
+    expect(migration0003).toContain("where problems = array['no_paso_google_maps']::text[]");
+    expect(migration0003).toContain("hidden_reason = coalesce(hidden_reason, 'problem_retired')");
+    expect(migration0003).toContain("set problems = array_remove(problems, 'no_paso_google_maps')");
+    // Stripping must skip single-problem rows, or they'd violate cardinality(problems) > 0.
+    expect(migration0003).toContain("and cardinality(problems) > 1");
+  });
+});
+
+describe("Supabase migration: 0004_ramp_problem_and_unit_normalization.sql", () => {
+  const migration0004 = readFileSync(join(root, "supabase/migrations/0004_ramp_problem_and_unit_normalization.sql"), "utf8");
+
+  it("replaces the problems constraint with one listing every current problem plus the retired one", () => {
+    expect(migration0004).toContain("alter table public.reports drop constraint reports_problems_check;");
+    expect(migration0004).toContain("cardinality(problems) > 0");
+    const listed = migration0004.match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
+    for (const problem of PROBLEMS) {
+      expect(listed).toContain(problem);
+    }
+    expect(listed).toContain("no_paso_google_maps");
+  });
+
+  it("normalizes stored plates and unit numbers the same way normalizeUnitCode does", () => {
+    expect(migration0004).toContain("set unit = 'SJB' || ltrim(regexp_replace(unit, '^SJB', ''), '0')");
+    expect(migration0004).toContain("between 4 and 6");
+    expect(migration0004).toContain("set unit = ltrim(unit, '0')");
   });
 });

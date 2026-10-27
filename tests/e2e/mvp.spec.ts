@@ -9,7 +9,7 @@ function getUniqueTestUnit(projectName: string) {
   const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT ?? 0);
   const projectOffset = projectName === "mobile" ? 10_000 : 20_000;
   const numericCode = 10_000 + ((runId + runAttempt * 997 + projectOffset) % 90_000);
-  return `U${numericCode}`;
+  return `SJB${numericCode}`; // a 5-digit plate, valid under normalizeUnitCode
 }
 
 test("home exposes the two primary actions and the disclaimer", async ({ page }) => {
@@ -37,7 +37,7 @@ test("report flow submits across categories, shows success feedback, and can be 
   await expect(page.getByRole("button", { name: "No tiene horario claro para pasar" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Me acosaron" })).toHaveAttribute("aria-pressed", "true");
 
-  await page.getByPlaceholder("Ej: 51 o SJB1234").fill(unit);
+  await page.getByPlaceholder("Ej: 51 o SJB 14285").fill(unit);
 
   const submitRequest = page.waitForRequest(
     (request) => request.url().endsWith("/api/reports") && request.method() === "POST",
@@ -63,7 +63,7 @@ test("report flow blocks an invalid unit code", async ({ page }) => {
   await page.goto("/es/reportar");
 
   await page.getByRole("button", { name: "Íbamos hacinados" }).click();
-  await page.getByPlaceholder("Ej: 51 o SJB1234").fill("!!!");
+  await page.getByPlaceholder("Ej: 51 o SJB 14285").fill("!!!");
   await expect(page.getByText("Ingresá el número de unidad o la placa, o dejá el campo vacío")).toBeVisible();
   await expect(page.getByTestId("submit-report")).toBeDisabled();
 });
@@ -95,7 +95,7 @@ test("report flow confirms a missing unit and can return focus to the unit field
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Añadir número de unidad" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByPlaceholder("Ej: 51 o SJB1234")).toBeFocused();
+  await expect(page.getByPlaceholder("Ej: 51 o SJB 14285")).toBeFocused();
 
   await page.getByTestId("submit-report").click();
   await expect(dialog).toBeVisible();
@@ -163,10 +163,29 @@ async function getTotalReports(section: import("@playwright/test").Locator) {
 test("report form links out to the open-ended report form", async ({ page }) => {
   await page.goto("/es/reportar");
 
-  const openReportLink = page.getByRole("link", { name: /Contanoslo acá/ });
+  const openReportLink = page.getByRole("link", { name: /Contánoslo acá/ });
   await expect(openReportLink).toBeVisible();
   await expect(openReportLink).toHaveAttribute("target", "_blank");
-  await expect(openReportLink).toHaveAttribute("href", /^https:\/\//);
+  await expect(openReportLink).toHaveAttribute("href", "https://forms.gle/v7gyawttsTiSD77a6");
+});
+
+test("schedules page summarizes authorized frequencies per route and links the official PDF", async ({ page, request }) => {
+  await page.goto("/es/horarios");
+
+  await expect(page.getByRole("heading", { level: 1, name: "¿Sabías que el bus tiene reglas oficiales?" })).toBeVisible();
+  await expect(page.getByTestId("schedule-route")).toHaveCount(6);
+  const granadilla = page.getByTestId("schedule-route").filter({ hasText: "Granadilla" });
+  await expect(granadilla).toContainText("14 buses autorizados");
+  await expect(granadilla).toContainText("cada 6–30 min");
+  await expect(page.getByTestId("schedule-route").filter({ hasText: "La Europa" })).toContainText("Sin servicio");
+  await expect(page.getByText("Vargas Araya, Barrio Pinto, Cedros: sin horario en este documento.")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Reportar", exact: true })).toHaveAttribute("href", "/es/reportar");
+
+  const pdfLink = page.getByRole("link", { name: /Ver documento/ });
+  await expect(pdfLink).toHaveAttribute("href", "/CTP-DT-DAC-CONS-1105-2026.pdf");
+  const pdf = await request.get("/CTP-DT-DAC-CONS-1105-2026.pdf");
+  expect(pdf.ok()).toBe(true);
+  expect(pdf.headers()["content-type"]).toContain("application/pdf");
 });
 
 test("dashboard reports-per-route chart reflects the two heaviest seeded routes", async ({ page }) => {

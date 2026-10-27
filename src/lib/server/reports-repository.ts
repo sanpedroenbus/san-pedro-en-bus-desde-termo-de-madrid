@@ -229,6 +229,7 @@ export async function createReportForRequest(
   const undoToken = createUndoToken();
   const undoTokenHash = hashUndoToken(undoToken);
   const undoExpiresAt = getUndoExpiresAt(now);
+  const noUnitWindowStart = new Date(now.getTime() - NO_UNIT_ORIGIN_WINDOW_MINUTES * 60_000);
   const supabase = getSupabase();
 
   if (!supabase) {
@@ -238,7 +239,6 @@ export async function createReportForRequest(
       const recentReports = memoryReports.filter((report) => report.abuseKey === abuseKey && report.createdAt >= rateLimitStart);
       if (recentReports.length >= RATE_LIMIT_MAX_REPORTS) return { ok: false, reason: "rate_limited" };
 
-      const noUnitWindowStart = new Date(now.getTime() - NO_UNIT_ORIGIN_WINDOW_MINUTES * 60_000);
       const hasRecentNoUnitReport = memoryReports.some(
         (report) => !report.unit && report.abuseKey === abuseKey && report.createdAt >= noUnitWindowStart && !report.hiddenAt,
       );
@@ -278,6 +278,7 @@ export async function createReportForRequest(
       input_rate_limit_start: getRateLimitStart(now).toISOString(),
       input_rate_limit_max: RATE_LIMIT_MAX_REPORTS,
       input_duplicate_window_start: duplicateWindowStart.toISOString(),
+      input_no_unit_window_start: noUnitWindowStart.toISOString(),
     })
     .single();
 

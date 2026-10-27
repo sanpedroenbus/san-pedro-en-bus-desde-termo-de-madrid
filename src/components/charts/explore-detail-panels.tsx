@@ -138,12 +138,12 @@ function RouteDetailCard({
     <article className="rounded-md border border-border bg-surface-raised p-4 text-left">
       <div className="flex items-center justify-between gap-2">
         <RouteBadge className="px-2 text-sm" route={summary.route} />
-        <span className="font-mono text-2xl font-semibold">{formatNumber(summary.reports, locale)}</span>
+        <span className="font-mono text-2xl font-semibold tabular-nums">{formatNumber(summary.reports, locale)}</span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div>
           <dt className="text-muted">{dictionary.explore.unitsReportedLabel}</dt>
-          <dd className="font-mono font-semibold">{formatNumber(summary.unitsReported, locale)}</dd>
+          <dd className="font-mono font-semibold tabular-nums">{formatNumber(summary.unitsReported, locale)}</dd>
         </div>
         <div>
           <dt className="text-muted">{dictionary.explore.latestReport}</dt>

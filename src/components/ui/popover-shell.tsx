@@ -7,7 +7,7 @@ import { useId, type ReactNode } from "react";
 export function StickyUtilityBar({ children }: { children: ReactNode }) {
   return (
     <div className="sticky top-[80px] z-[var(--z-sticky)] -mx-4 px-4 py-3">
-      <div className="rounded-lg border border-border bg-[var(--drawer-surface)] p-2 shadow-[var(--shadow-popover)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[var(--drawer-surface)]">
+      <div className="rounded-lg border border-border bg-[var(--drawer-surface)] p-2 shadow-[var(--shadow-popover)]">
         {children}
       </div>
     </div>
