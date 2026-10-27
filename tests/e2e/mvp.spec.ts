@@ -283,3 +283,19 @@ test("home report counter keeps four digits clear of its icon on a narrow phone"
   expect(iconBox).not.toBeNull();
   expect(countBox!.x + countBox!.width).toBeLessThan(iconBox!.x);
 });
+
+test("schedules page leads to the opt-in, which preselects tracking and confirms the sign-up", async ({ page }, testInfo) => {
+  await page.goto("/es/horarios");
+  await page.getByRole("main").getByRole("link", { name: "Quiero participar" }).click();
+  await page.waitForURL(/\/es\/colaborar\?interes=seguimiento/);
+
+  await expect(page.getByRole("heading", { level: 1, name: "Ayudanos a construir lo que sigue" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /Saber dónde viene el bus/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Mapear las paradas/ })).not.toBeChecked();
+
+  await page.getByLabel("Correo").fill(`e2e-${testInfo.project.name}-${Date.now()}@ejemplo.cr`);
+  await page.getByRole("checkbox", { name: /Acepto que San Pedro en Bus guarde/ }).check();
+  await page.getByRole("button", { name: "Quiero colaborar" }).click();
+
+  await expect(page.getByRole("status")).toHaveText("¡Gracias! Te vamos a escribir cuando arranquemos.");
+});

@@ -18,7 +18,10 @@ const dashboardCacheMock = vi.hoisted(() => ({
   })),
 }));
 
+const collaboratorsMock = vi.hoisted(() => ({ addCollaborator: vi.fn() }));
+
 vi.mock("@/lib/server/reports-repository", () => repositoryMock);
+vi.mock("@/lib/server/collaborators-repository", () => collaboratorsMock);
 vi.mock("@/lib/server/dashboard-cache", () => dashboardCacheMock);
 vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
@@ -268,5 +271,52 @@ describe("GET /api/dashboard/unit", () => {
 
     expect(response.status).toBe(500);
     expect(payload).toEqual({ selection: null, reason: "server_error" });
+  });
+});
+
+describe("POST /api/collaborators", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  function post(body: unknown) {
+    return new Request("https://sanpedro.test/api/collaborators", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("rejects a sign-up without consent before touching storage", async () => {
+    const { POST } = await import("./collaborators/route");
+    const response = await POST(post({ email: "ana@ejemplo.cr", interests: ["mapeo"], consent: false }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ ok: false, reason: "invalid" });
+    expect(collaboratorsMock.addCollaborator).not.toHaveBeenCalled();
+  });
+
+  it("stores the normalized contact and never echoes it back", async () => {
+    collaboratorsMock.addCollaborator.mockResolvedValue({ ok: true });
+    const { POST } = await import("./collaborators/route");
+    const response = await POST(post({ whatsapp: "8888-8888", interests: ["seguimiento"], consent: true }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(collaboratorsMock.addCollaborator.mock.calls[0][0]).toMatchObject({ whatsapp: "+50688888888", email: null });
+  });
+
+  it("maps rate limiting to 429 and storage failures to 500", async () => {
+    const { POST } = await import("./collaborators/route");
+    const body = { email: "ana@ejemplo.cr", interests: ["mapeo"], consent: true };
+
+    collaboratorsMock.addCollaborator.mockResolvedValueOnce({ ok: false, reason: "rate_limited" });
+    expect((await POST(post(body))).status).toBe(429);
+
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    collaboratorsMock.addCollaborator.mockRejectedValueOnce(new Error("db down"));
+    const failed = await POST(post(body));
+    expect(failed.status).toBe(500);
+    expect(await failed.json()).toEqual({ ok: false, reason: "server_error" });
   });
 });

@@ -39,10 +39,12 @@ export function getRequestFingerprint(request: Request): RequestFingerprint {
   };
 }
 
-export function createAbuseKey(fingerprint: RequestFingerprint) {
+// `scope` keeps keys from different tables from matching each other, so a
+// collaborator sign-up can't be joined to that person's reports by key.
+export function createAbuseKey(fingerprint: RequestFingerprint, scope: "abuse" | "collaborators" = "abuse") {
   return createHash("sha256")
     .update(getAbuseSecret())
-    .update(":abuse:")
+    .update(`:${scope}:`)
     .update(fingerprint.ip)
     .digest("hex");
 }

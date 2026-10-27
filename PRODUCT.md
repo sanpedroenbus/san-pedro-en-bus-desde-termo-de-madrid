@@ -102,18 +102,18 @@ Specific requirements:
 - Support reduced motion for all transitions.
 - Ensure text contrast meets accessibility requirements, including helper and placeholder text.
 - Spanish only in v1 (see Core Product Scope). Keep the `[lang]` route structure and locale-dictionary architecture intact so English can return cheaply later, rather than inlining Spanish strings into components.
-- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/horarios`, `/es/metodologia`.
+- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/horarios`, `/es/colaborar`, `/es/metodologia`.
 
 ## Data Trust & Abuse Controls
 
-Reports are anonymous publicly. The system may store short-lived private technical abuse keys derived server-side for rate limiting and duplicate suppression, but must not expose user identifiers in dashboards.
+Reports are anonymous publicly. The one exception to "no personal data" is the voluntary /colaborar contact list: stored only for inviting people to those projects, readable only by project admins (RLS, no public grants), never shown, shared or linked to reports, and deleted on request (riders reply to any message). The system may store short-lived private technical abuse keys derived server-side for rate limiting and duplicate suppression, but must not expose user identifiers in dashboards.
 
 V1 abuse controls:
 
 - Server timestamp only; no backdating field.
 - Open anonymous submission without accounts.
 - Client and server validation.
-- Unit identifiers accept 1-10 alphanumeric characters (a bus unit number or a licence plate, either is valid), normalized to uppercase.
+- Unit identifiers are a 1-3 digit bus unit number or a 4-6 digit licence plate (`SJB` prefix optional), stored as `SJB` + digits without leading zeros; see `normalizeUnitCode`.
 - Rate limiting by private abuse key.
 - Soft duplicate suppression, in two layers. Reports with a unit identifier are suppressed within a short window when route, unit, and problem set match. Reports without a unit identifier are suppressed against any other recent no-unit report on the same route within that same short window, regardless of which problems were selected. Separately, an origin (by private abuse key) may submit at most one no-unit report across *all* routes every 30 minutes, regardless of route or problems. Both layers deliberately favor spam protection over completeness — this is a signal-tracking tool, not an emergency-services replacement, and an occasional false rejection is an acceptable cost. A stronger bot/human check (for example, fronting the report endpoint with Cloudflare) is a future idea, not committed for v1.
 - Friendly duplicate feedback such as "Ya registramos este reporte hace un momento."
@@ -130,6 +130,7 @@ V1 routes:
 - /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, five categories), optional unit field, success feedback, and an outbound link to an external open-text form for anything that doesn't fit the fixed catalogue (see "Open-ended reports" below).
 - /explorar: dashboard with route, problem, and time-range filters, charts, unit/route detail.
 - /horarios: plain-language summary of the service conditions the regulator (CTP) authorizes for Ruta 50 — authorized frequencies per route and day type (range and plain mean, flagged where service has gaps), fleet size, ramps, permit validity — with a call to report and share, and the official record (`public/CTP-DT-DAC-CONS-1105-2026.pdf`) as source. It is context, never combined with report counts into a ratio or score (no reports-per-bus, no compliance percentage) unless this document is revised first.
+- /colaborar: opt-in for riders who want to be contacted about two future projects — mapping the real stops (no public stop list exists) and exploring rider-shared bus tracking for better arrival estimates. Collects an email and/or WhatsApp number, the chosen projects and explicit consent; nothing else. /horarios links to it with tracking preselected. This is an interest list only: no GPS, accounts or tracking exist in v1.
 - /metodologia: lightweight methodology, privacy, abuse-control, and low-volume-data explanation, plus the affiliation disclaimer and origin-project attribution.
 
 V1 dashboard modules — the six questions the dashboard must answer, and nothing framed as a single score:

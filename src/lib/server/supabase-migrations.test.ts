@@ -22,6 +22,7 @@ describe("Supabase migration: 0001_initial.sql", () => {
       "0002_create_report_no_unit_origin_window.sql",
       "0003_retire_no_paso_google_maps.sql",
       "0004_ramp_problem_and_unit_normalization.sql",
+      "0005_collaborators.sql",
     ]);
   });
 
@@ -191,5 +192,24 @@ describe("Supabase migration: 0004_ramp_problem_and_unit_normalization.sql", () 
     expect(migration0004).toContain("set unit = 'SJB' || ltrim(regexp_replace(unit, '^SJB', ''), '0')");
     expect(migration0004).toContain("between 4 and 6");
     expect(migration0004).toContain("set unit = ltrim(unit, '0')");
+  });
+});
+
+describe("Supabase migration: 0005_collaborators.sql", () => {
+  const migration0005 = readFileSync(join(root, "supabase/migrations/0005_collaborators.sql"), "utf8");
+
+  it("keeps contact data private: RLS on, no policies, no anon/authenticated grants", () => {
+    expect(migration0005).toContain("alter table public.collaborators enable row level security;");
+    expect(migration0005).toContain("revoke all on public.collaborators from anon, authenticated;");
+    expect(migration0005).not.toMatch(/create policy/i);
+    expect(migration0005).not.toMatch(/grant [a-z, ]+ on public\.collaborators to (anon|authenticated)/i);
+  });
+
+  it("requires a contact, a known interest and a consent time, and dedupes contacts", () => {
+    expect(migration0005).toContain("check (email is not null or whatsapp is not null)");
+    expect(migration0005).toContain("interests <@ array['mapeo', 'seguimiento']::text[]");
+    expect(migration0005).toContain("consented_at timestamptz not null");
+    expect(migration0005).toContain("create unique index collaborators_email_key");
+    expect(migration0005).toContain("create unique index collaborators_whatsapp_key");
   });
 });

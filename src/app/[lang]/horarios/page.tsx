@@ -98,6 +98,15 @@ export default async function SchedulesPage({ params }: { params: Promise<{ lang
               </Button>
               <ShareLinkButton copiedLabel={dictionary.common.shareLinkCopied} label={copy.ctaShare} title={copy.title} />
             </div>
+            <p className="border-t border-border pt-4">
+              {copy.collaborateTeaser}{" "}
+              <Link
+                className="inline-flex min-h-11 items-center font-semibold text-foreground underline decoration-border underline-offset-2 transition-colors hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                href={`/${lang}/colaborar?interes=seguimiento`}
+              >
+                {copy.collaborateLink}
+              </Link>
+            </p>
           </Section>
         </div>
 

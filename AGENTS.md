@@ -14,10 +14,11 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root â
 ## Product Rules
 
 - The app is Spanish-only in v1. Do not hardcode user-facing strings in components. Put copy in the locale dictionary (`src/lib/i18n/messages/es.ts`). Keep the `[lang]` route structure and dictionary architecture intact so English can return cheaply later â€” do not collapse them just because there is currently one locale.
-- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/horarios`, `/es/metodologia`.
+- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/horarios`, `/es/colaborar`, `/es/metodologia`.
 - The public UI must not imply affiliation with any transit company. The company is never named in-product. Always preserve the disclaimer: `Proyecto ciudadano, no afiliado a ninguna empresa de transporte`.
 - Keep the origin-project attribution (Termo de Madrid, `nachoggodino`) prominent in the mission copy and footer credit.
 - Reports are anonymous publicly. Do not expose IPs, device hashes, user agents, or abuse keys.
+- The `/es/colaborar` opt-in is the only place the app collects personal contact data (email/WhatsApp). It lives in `public.collaborators`, which has RLS on and no policies or anon/authenticated grants: write-only through the server, readable only by project admins. Never join it to reports (its abuse key is derived in a separate scope for that reason), never expose it through an API or page, and don't add fields beyond contact, interests and consent time without revising `PRODUCT.md`.
 - Do not add accounts, GPS prompts, open text comments, backdating, or offline submission unless `PRODUCT.md` is intentionally revised first.
 - Treat reports as signals, not truth. Dashboards must show confidence and recency where relevant.
 - Do not lead dashboards with a single network average that hides a bad route. Reports-per-route is the lead module.
