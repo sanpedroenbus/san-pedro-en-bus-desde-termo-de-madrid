@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { SquareArrowOutUpRight, TriangleAlert } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { offerInstall } from "@/components/shell/install-prompt";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/tooltip";
 import { FEEDBACK_TOKENS } from "@/lib/design/tokens";
@@ -14,14 +15,14 @@ import { ROUTES } from "@/lib/domain/routes";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { ProblemSelector } from "./problem-selector";
+import { getLastReportRoute, saveLastReportRoute } from "./last-route";
 import { clearReportCooldown, getReportCooldownRemainingMs, markReportSubmitted, REPORT_COOLDOWN_MS } from "./report-cooldown";
 import { RoutePicker } from "./route-picker";
 
-// TODO: replace with the real Google Form link before shipping this feature.
 // This form is for open-ended reports that don't fit the fixed 16-problem
 // catalogue -- it's intentionally external and not wired into the reports
 // API or the statistics dashboard (see PRODUCT.md).
-const OPEN_REPORT_FORM_URL = "https://forms.google.com/REPLACE_WITH_REAL_FORM_ID";
+const OPEN_REPORT_FORM_URL = "https://forms.gle/v7gyawttsTiSD77a6";
 
 type ApiErrorReason = "duplicate" | "invalid" | "rate_limited" | "server_error";
 
@@ -54,6 +55,8 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
     // readable client-side anyway, so this can't run during the initial
     // server-rendered pass.
     const checkTimeout = setTimeout(() => {
+      const lastRoute = getLastReportRoute();
+      if (lastRoute) setRoute(lastRoute);
       const remaining = getReportCooldownRemainingMs();
       if (remaining <= 0) return;
       setCooldownRemainingMs(remaining);
@@ -120,10 +123,20 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
       }
 
       startCooldown();
+      saveLastReportRoute(route);
+      // Offer install only once the undo toast is gone, so the two never compete.
+      let undone = false;
+      let installOffered = false;
+      const offerInstallAfterUndoWindow = () => {
+        if (undone || installOffered) return;
+        installOffered = true;
+        offerInstall(dictionary);
+      };
       toast.success(dictionary.reportForm.success, {
         action: {
           label: dictionary.reportForm.undo,
           onClick: () => {
+            undone = true;
             fetch(`/api/reports/${payload.report.id}`, {
               method: "DELETE",
               headers: { "content-type": "application/json" },
@@ -137,8 +150,9 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
           },
         },
         duration: FEEDBACK_TOKENS.undoToastDurationMs,
+        onAutoClose: offerInstallAfterUndoWindow,
+        onDismiss: offerInstallAfterUndoWindow,
       });
-      setRoute(ROUTES[0]);
       setProblems([]);
       setUnit("");
       startTransition(() => router.push(`/${locale}/explorar`));
@@ -159,10 +173,15 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
           <InfoTooltip label={dictionary.reportForm.unitHelp}>{dictionary.reportForm.unitHelp}</InfoTooltip>
         </span>
         <input
-          className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary"
+          autoCapitalize="characters"
+          autoComplete="off"
+          autoCorrect="off"
+          className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-base outline-none transition focus:border-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary"
+          name="unit"
           onChange={(event) => setUnit(event.target.value)}
           placeholder={dictionary.reportForm.unitPlaceholder}
           ref={unitInputRef}
+          spellCheck={false}
           suppressHydrationWarning
           value={unit}
         />

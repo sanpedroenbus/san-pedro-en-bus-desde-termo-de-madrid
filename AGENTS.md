@@ -14,7 +14,7 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root �
 ## Product Rules
 
 - The app is Spanish-only in v1. Do not hardcode user-facing strings in components. Put copy in the locale dictionary (`src/lib/i18n/messages/es.ts`). Keep the `[lang]` route structure and dictionary architecture intact so English can return cheaply later — do not collapse them just because there is currently one locale.
-- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/metodologia`.
+- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/horarios`, `/es/metodologia`.
 - The public UI must not imply affiliation with any transit company. The company is never named in-product. Always preserve the disclaimer: `Proyecto ciudadano, no afiliado a ninguna empresa de transporte`.
 - Keep the origin-project attribution (Termo de Madrid, `nachoggodino`) prominent in the mission copy and footer credit.
 - Reports are anonymous publicly. Do not expose IPs, device hashes, user agents, or abuse keys.
@@ -23,7 +23,7 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root �
 - Do not lead dashboards with a single network average that hides a bad route. Reports-per-route is the lead module.
 - Do not reintroduce a weighted scoring index, time decay, or fleet-coverage percentage. This product counts plainly and unweighted — the methodology copy commits to this publicly.
 - A bus report carries **one or more problems** from the fixed 16-item catalogue, grouped into 5 categories (`fiabilidad`, `paradas`, `seguridad`, `condicion`, `convivencia`). It is not a single state chosen from a severity scale.
-- A "unit" is either a bus unit number or a licence plate — either is valid in the same optional field. Do not reintroduce the old Metro car-code format (`^[A-Z][0-9]{4,5}$`) or any car-series concept; neither has a bus equivalent.
+- A "unit" is either a bus unit number (1-3 digits) or a licence plate (4-6 digits, `SJB` prefix optional on input) — either is valid in the same optional field. Plates are stored as `SJB` + digits without leading zeros so the official zero-padded format (`SJB014285`) and what riders read on the bus (`SJB 14285`) match; `normalizeUnitCode` in `src/lib/domain/reports.ts` is the single source of that rule. Do not reintroduce the old Metro car-code format (`^[A-Z][0-9]{4,5}$`) or any car-series concept; neither has a bus equivalent.
 
 ## Design Rules
 
@@ -90,3 +90,13 @@ Before finalizing a change, review:
 - Update `DESIGN.md` when visual tokens, component vocabulary, motion rules, or chart language change.
 - Update `makeover.md`'s status and pendings tables as phases complete or new issues surface, while the rebuild is in progress.
 - Update this file when implementation discipline changes.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

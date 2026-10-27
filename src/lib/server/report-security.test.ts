@@ -50,23 +50,22 @@ describe("report security helpers", () => {
 
   describe("abuse key derivation", () => {
     it("derives a stable private abuse key without exposing raw request data", () => {
-      const fingerprint = { ip: "203.0.113.8", userAgent: "test-browser" };
+      const fingerprint = { ip: "203.0.113.8" };
 
       const key = createAbuseKey(fingerprint);
       expect(key).toBe(createAbuseKey(fingerprint));
       expect(key).not.toContain(fingerprint.ip);
-      expect(key).not.toContain(fingerprint.userAgent);
       // sha256 hex digest.
       expect(key).toMatch(/^[0-9a-f]{64}$/);
     });
 
-    it("produces different keys for different origins", () => {
-      const a = createAbuseKey({ ip: "203.0.113.8", userAgent: "browser-a" });
-      const b = createAbuseKey({ ip: "203.0.113.9", userAgent: "browser-a" });
-      const c = createAbuseKey({ ip: "203.0.113.8", userAgent: "browser-b" });
+    it("keys on IP only, so rotating the user agent can't reset the rate limit", () => {
+      const a = createAbuseKey(getRequestFingerprint(new Request("https://sanpedro.test", { headers: { "x-forwarded-for": "203.0.113.8", "user-agent": "browser-a" } })));
+      const b = createAbuseKey(getRequestFingerprint(new Request("https://sanpedro.test", { headers: { "x-forwarded-for": "203.0.113.9", "user-agent": "browser-a" } })));
+      const c = createAbuseKey(getRequestFingerprint(new Request("https://sanpedro.test", { headers: { "x-forwarded-for": "203.0.113.8", "user-agent": "browser-b" } })));
 
       expect(a).not.toBe(b);
-      expect(a).not.toBe(c);
+      expect(a).toBe(c);
     });
 
     it("extracts a request fingerprint from forwarding headers, preferring the first forwarded IP", () => {
@@ -77,10 +76,7 @@ describe("report security helpers", () => {
         },
       });
 
-      expect(getRequestFingerprint(request)).toEqual({
-        ip: "198.51.100.4",
-        userAgent: "playwright",
-      });
+      expect(getRequestFingerprint(request)).toEqual({ ip: "198.51.100.4" });
     });
 
     it("falls back to x-real-ip and then a local marker when no forwarding headers are present", () => {
@@ -91,7 +87,6 @@ describe("report security helpers", () => {
 
       expect(getRequestFingerprint(withRealIp).ip).toBe("192.0.2.1");
       expect(getRequestFingerprint(withNoHeaders).ip).toBe("local");
-      expect(getRequestFingerprint(withNoHeaders).userAgent).toBe("unknown");
     });
   });
 

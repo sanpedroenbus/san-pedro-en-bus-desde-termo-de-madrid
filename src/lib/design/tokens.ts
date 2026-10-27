@@ -43,6 +43,7 @@ export const SERIES_CHART_COLORS = [
 
 export const FEEDBACK_TOKENS = {
   undoToastDurationMs: 12_000,
+  installToastDurationMs: 20_000,
 } as const;
 
 export const SOCIAL_IMAGE_TOKENS = {

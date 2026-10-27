@@ -1,6 +1,5 @@
 export const PROBLEMS = [
   "no_horario_claro",
-  "no_paso_google_maps",
   "duro_toda_la_vida",
   "no_hizo_parada",
   "paro_otro_lado",
@@ -15,6 +14,7 @@ export const PROBLEMS = [
   "acoso",
   "conduccion_temeraria",
   "horario_sin_servicio",
+  "rampa_no_funciono",
 ] as const;
 
 export type Problem = (typeof PROBLEMS)[number];
@@ -29,7 +29,6 @@ export type ProblemCategory = (typeof PROBLEM_CATEGORIES)[number];
 
 export const PROBLEM_CATEGORY: Record<Problem, ProblemCategory> = {
   no_horario_claro: "fiabilidad",
-  no_paso_google_maps: "fiabilidad",
   duro_toda_la_vida: "fiabilidad",
   horario_sin_servicio: "fiabilidad",
   no_hizo_parada: "paradas",
@@ -41,6 +40,7 @@ export const PROBLEM_CATEGORY: Record<Problem, ProblemCategory> = {
   hacinados: "condicion",
   cucarachas: "condicion",
   olia_mal_sucio: "condicion",
+  rampa_no_funciono: "condicion",
   chofer_trato_mal: "convivencia",
   volumen_molesto: "convivencia",
   pasajero_sin_audifonos: "convivencia",

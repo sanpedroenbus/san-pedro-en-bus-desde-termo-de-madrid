@@ -20,6 +20,16 @@ export function formatReportDateTime(date: Date, locale: Locale) {
   });
 }
 
+// "2029-08-28" -> "28 de agosto de 2029". Noon UTC keeps the calendar day in Costa Rica's UTC-6.
+export function formatLongDate(isoDate: string, locale: Locale) {
+  return new Date(`${isoDate}T12:00:00Z`).toLocaleDateString(getIntlLocale(locale), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: APP_TIME_ZONE,
+  });
+}
+
 export function formatNumber(value: number, locale: Locale, options: Intl.NumberFormatOptions = {}) {
   return new Intl.NumberFormat(getIntlLocale(locale), {
     maximumFractionDigits: 2,

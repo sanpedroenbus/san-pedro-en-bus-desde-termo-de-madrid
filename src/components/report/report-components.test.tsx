@@ -136,6 +136,7 @@ describe("RecentReportRow", () => {
 
 describe("ReportForm", () => {
   beforeEach(() => {
+    localStorage.clear();
     push.mockReset();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ json: () => Promise.resolve({ ok: true }) }));
   });
@@ -174,5 +175,32 @@ describe("ReportForm", () => {
         body: JSON.stringify({ route: ROUTES[0], problems: [PROBLEMS[0]], unit: null }),
       }),
     );
+  });
+
+  it("opens on the last reported route and remembers the route a report is sent from", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("sanpedroenbus:lastReportRoute", ROUTES[2]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ json: () => Promise.resolve({ ok: true, report: { id: "report-1" }, undoToken: "undo-1" }) }),
+    );
+
+    render(<ReportForm dictionary={esMessages} locale="es" />);
+
+    expect(await screen.findByRole("button", { name: ROUTE_LABELS[ROUTES[2]], pressed: true })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: ROUTE_LABELS[ROUTES[4]] }));
+    await user.click(screen.getByRole("button", { name: getProblemLabel(esMessages, PROBLEMS[0]) }));
+    await user.type(screen.getByRole("textbox"), "51");
+    await user.click(screen.getByTestId("submit-report"));
+
+    await vi.waitFor(() => expect(localStorage.getItem("sanpedroenbus:lastReportRoute")).toBe(ROUTES[4]));
+  });
+
+  it("ignores a stored route that is no longer valid", async () => {
+    localStorage.setItem("sanpedroenbus:lastReportRoute", "NOT_A_ROUTE");
+    render(<ReportForm dictionary={esMessages} locale="es" />);
+
+    expect(await screen.findByRole("button", { name: ROUTE_LABELS[ROUTES[0]], pressed: true })).toBeInTheDocument();
   });
 });

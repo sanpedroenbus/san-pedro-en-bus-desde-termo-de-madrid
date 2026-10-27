@@ -43,7 +43,7 @@ describe("reports-repository (memory store)", () => {
       vi.stubEnv("TERMO_REQUIRE_SUPABASE", "1");
       vi.stubEnv("TERMO_ALLOW_MEMORY_STORE", "0");
 
-      await expect(createReportForRequest(input(), null, new Date("2026-07-05T12:00:00Z"))).rejects.toThrow(
+      await expect(createReportForRequest(input(), null, new Date("2026-10-05T12:00:00Z"))).rejects.toThrow(
         "TERMO_ABUSE_SECRET is required",
       );
     });
@@ -53,7 +53,7 @@ describe("reports-repository (memory store)", () => {
       vi.stubEnv("TERMO_ALLOW_MEMORY_STORE", "0");
       vi.stubEnv("TERMO_ABUSE_SECRET", "test-secret");
 
-      await expect(createReportForRequest(input(), null, new Date("2026-07-05T12:00:00Z"))).rejects.toThrow(
+      await expect(createReportForRequest(input(), null, new Date("2026-10-05T12:00:00Z"))).rejects.toThrow(
         "Supabase is required in this environment",
       );
     });
@@ -61,7 +61,7 @@ describe("reports-repository (memory store)", () => {
 
   describe("createReportForRequest", () => {
     it("persists a report against the provided clock and returns an undo token", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       const result = await createReportForRequest(input({ route: "CEDROS", unit: "51", problems: ["hacinados"] }), null, now);
 
       expect(result.ok).toBe(true);
@@ -76,7 +76,7 @@ describe("reports-repository (memory store)", () => {
     });
 
     it("dedupes and sorts problems before storing them (normalizeProblems)", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       const result = await createReportForRequest(
         input({ route: "GRANADILLA", unit: "77", problems: ["hacinados", "cucarachas", "hacinados"] }),
         null,
@@ -99,12 +99,12 @@ describe("reports-repository (memory store)", () => {
         const first = await createReportForRequest(
           input({ route: "SAN_RAMON", unit: null, problems: ["hacinados"] }),
           null,
-          new Date("2026-07-05T12:00:00Z"),
+          new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           input({ route: "SAN_RAMON", unit: null, problems: ["acoso", "cucarachas"] }),
           null,
-          new Date("2026-07-05T12:01:00Z"),
+          new Date("2026-10-05T12:01:00Z"),
         );
 
         expect(first.ok).toBe(true);
@@ -112,7 +112,7 @@ describe("reports-repository (memory store)", () => {
       });
 
       it("does not suppress no-unit reports made on a different route", async () => {
-        const now = new Date("2026-07-05T12:00:00Z");
+        const now = new Date("2026-10-05T12:00:00Z");
         const first = await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), null, now);
         const second = await createReportForRequest(input({ route: "SABANILLA", unit: null }), null, now);
 
@@ -126,14 +126,14 @@ describe("reports-repository (memory store)", () => {
         const first = await createReportForRequest(
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas", "acoso"] }),
           null,
-          new Date("2026-07-05T12:00:00Z"),
+          new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           // Same problems, different submission order: the comparison is
           // order-insensitive.
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["acoso", "cucarachas"] }),
           null,
-          new Date("2026-07-05T12:02:00Z"),
+          new Date("2026-10-05T12:02:00Z"),
         );
 
         expect(first.ok).toBe(true);
@@ -144,12 +144,12 @@ describe("reports-repository (memory store)", () => {
         const first = await createReportForRequest(
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas"] }),
           null,
-          new Date("2026-07-05T12:00:00Z"),
+          new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["acoso"] }),
           null,
-          new Date("2026-07-05T12:02:00Z"),
+          new Date("2026-10-05T12:02:00Z"),
         );
 
         expect(first.ok).toBe(true);
@@ -158,11 +158,11 @@ describe("reports-repository (memory store)", () => {
     });
 
     describe("no-unit-per-origin window (abuse key scoped, cross-route)", () => {
-      const fingerprint = { ip: "203.0.113.30", userAgent: "origin-window-browser" };
+      const fingerprint = { ip: "203.0.113.30" };
 
       it(`allows only one no-unit report per origin across routes every ${NO_UNIT_ORIGIN_WINDOW_MINUTES} minutes`, async () => {
         vi.stubEnv("TERMO_ABUSE_SECRET", "test-abuse-secret");
-        const now = new Date("2026-07-05T12:00:00Z");
+        const now = new Date("2026-10-05T12:00:00Z");
 
         const first = await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), fingerprint, now);
         const atBoundary = await createReportForRequest(
@@ -183,8 +183,8 @@ describe("reports-repository (memory store)", () => {
 
       it("does not apply the no-unit origin window to a different origin or to identified-unit reports from the same origin", async () => {
         vi.stubEnv("TERMO_ABUSE_SECRET", "test-abuse-secret");
-        const now = new Date("2026-07-05T12:00:00Z");
-        const otherFingerprint = { ip: "203.0.113.31", userAgent: "other-origin-browser" };
+        const now = new Date("2026-10-05T12:00:00Z");
+        const otherFingerprint = { ip: "203.0.113.31" };
 
         const noUnit = await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), fingerprint, now);
         const otherOrigin = await createReportForRequest(
@@ -207,8 +207,8 @@ describe("reports-repository (memory store)", () => {
     describe("rate limiting", () => {
       it(`limits a single request fingerprint to ${RATE_LIMIT_MAX_REPORTS} reports within the rate limit window`, async () => {
         vi.stubEnv("TERMO_ABUSE_SECRET", "test-abuse-secret");
-        const now = new Date("2026-07-05T12:00:00Z");
-        const fingerprint = { ip: "203.0.113.10", userAgent: "rate-limit-browser" };
+        const now = new Date("2026-10-05T12:00:00Z");
+        const fingerprint = { ip: "203.0.113.10" };
 
         const results = await Promise.all(
           Array.from({ length: RATE_LIMIT_MAX_REPORTS }, (_, index) =>
@@ -222,7 +222,7 @@ describe("reports-repository (memory store)", () => {
       });
 
       it("does not rate-limit requests made without a request fingerprint", async () => {
-        const now = new Date("2026-07-05T12:00:00Z");
+        const now = new Date("2026-10-05T12:00:00Z");
 
         const results = await Promise.all(
           Array.from({ length: RATE_LIMIT_MAX_REPORTS + 1 }, (_, index) =>
@@ -237,7 +237,7 @@ describe("reports-repository (memory store)", () => {
 
   describe("undoReport", () => {
     it("removes a report and rejects a repeated undo with the same token", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       const created = await createReportForRequest(input({ route: "CEDROS", unit: "51" }), null, now);
       expect(created.ok).toBe(true);
       if (!created.ok) return;
@@ -250,7 +250,7 @@ describe("reports-repository (memory store)", () => {
     });
 
     it("rejects an incorrect undo token without removing the report", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       const created = await createReportForRequest(input({ route: "CEDROS", unit: "52" }), null, now);
       expect(created.ok).toBe(true);
       if (!created.ok) return;
@@ -263,7 +263,7 @@ describe("reports-repository (memory store)", () => {
     });
 
     it("rejects an undo token after the undo window has expired but accepts it at the exact boundary", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       const created = await createReportForRequest(input({ route: "CEDROS", unit: "53" }), null, now);
       expect(created.ok).toBe(true);
       if (!created.ok) return;
@@ -280,14 +280,14 @@ describe("reports-repository (memory store)", () => {
     });
 
     it("returns false for an unknown report id", async () => {
-      const result = await undoReport("does-not-exist", "any-token", new Date("2026-07-05T12:00:00Z"));
+      const result = await undoReport("does-not-exist", "any-token", new Date("2026-10-05T12:00:00Z"));
       expect(result).toBe(false);
     });
   });
 
   describe("getUnitSuggestions", () => {
     it("ranks units on a route by report count, descending", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       await createReportForRequest(input({ route: "CEDROS", unit: "A1", problems: ["hacinados"] }), null, now);
       await createReportForRequest(
         input({ route: "CEDROS", unit: "A1", problems: ["cucarachas"] }),
@@ -309,7 +309,7 @@ describe("reports-repository (memory store)", () => {
 
   describe("getHomeSnapshot", () => {
     it("counts only visible reports from the last 24 hours and excludes undone reports", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       const outsideWindow = await createReportForRequest(
         input({ route: "CEDROS", unit: "old" }),
         null,
@@ -347,7 +347,7 @@ describe("reports-repository (memory store)", () => {
 
   describe("getMemoryDashboard / getMemoryUnitDetail (route-filter wiring)", () => {
     it("filters the dashboard to only the requested routes", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       await createReportForRequest(input({ route: "CEDROS", unit: "1" }), null, now);
       await createReportForRequest(input({ route: "SABANILLA", unit: "2" }), null, now);
 
@@ -364,7 +364,7 @@ describe("reports-repository (memory store)", () => {
     });
 
     it("builds a unit's history scoped to the requested routes and returns null for an unreported unit", async () => {
-      const now = new Date("2026-07-05T12:00:00Z");
+      const now = new Date("2026-10-05T12:00:00Z");
       await createReportForRequest(input({ route: "CEDROS", unit: "77", problems: ["hacinados"] }), null, now);
       // Same "now" clock as the request below (the "all" range window ends
       // at `now`, so a timestamp after it would be filtered out).

@@ -66,7 +66,7 @@ Avoid:
 
 ### Open-ended reports
 
-Riders sometimes have something to report that doesn't fit the fixed 16-problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (currently a placeholder Google Form URL in `report-form.tsx`, pending the real link) for that kind of report.
+Riders sometimes have something to report that doesn't fit the fixed 16-problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (a Google Form, `OPEN_REPORT_FORM_URL` in `report-form.tsx`) for that kind of report.
 
 This form is intentionally outside the app's own data model:
 
@@ -102,7 +102,7 @@ Specific requirements:
 - Support reduced motion for all transitions.
 - Ensure text contrast meets accessibility requirements, including helper and placeholder text.
 - Spanish only in v1 (see Core Product Scope). Keep the `[lang]` route structure and locale-dictionary architecture intact so English can return cheaply later, rather than inlining Spanish strings into components.
-- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/metodologia`.
+- Keep route slugs stable: `/es/reportar`, `/es/explorar`, `/es/horarios`, `/es/metodologia`.
 
 ## Data Trust & Abuse Controls
 
@@ -129,6 +129,7 @@ V1 routes:
 - Home: compact civic landing with title, mission sentence, two visible actions, live snapshot, and disclaimer.
 - /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, five categories), optional unit field, success feedback, and an outbound link to an external open-text form for anything that doesn't fit the fixed catalogue (see "Open-ended reports" below).
 - /explorar: dashboard with route, problem, and time-range filters, charts, unit/route detail.
+- /horarios: plain-language summary of the service conditions the regulator (CTP) authorizes for Ruta 50 — authorized frequencies per route and day type (range and plain mean, flagged where service has gaps), fleet size, ramps, permit validity — with a call to report and share, and the official record (`public/CTP-DT-DAC-CONS-1105-2026.pdf`) as source. It is context, never combined with report counts into a ratio or score (no reports-per-bus, no compliance percentage) unless this document is revised first.
 - /metodologia: lightweight methodology, privacy, abuse-control, and low-volume-data explanation, plus the affiliation disclaimer and origin-project attribution.
 
 V1 dashboard modules — the six questions the dashboard must answer, and nothing framed as a single score:

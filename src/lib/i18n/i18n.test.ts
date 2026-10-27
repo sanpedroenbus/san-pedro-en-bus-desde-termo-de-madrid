@@ -3,7 +3,7 @@ import { getProblemLabel } from "@/components/report/problem-label";
 import { PROBLEM_CATEGORIES, PROBLEMS } from "@/lib/domain/problems";
 import { defaultAppCopy } from "./app-copy";
 import { DEFAULT_LOCALE, isLocale, LOCALES, localeNames } from "./config";
-import { formatNumber, formatRelativeReportAge, formatReportDateTime, formatReportTime, getIntlLocale } from "./format";
+import { formatLongDate, formatNumber, formatRelativeReportAge, formatReportDateTime, formatReportTime, getIntlLocale } from "./format";
 import { messages as esMessages } from "./messages/es";
 
 // dictionaries.ts (getDictionary) imports the "server-only" package, which
@@ -77,6 +77,11 @@ describe("locale-aware formatting", () => {
 
   it("formats decimals with the Spanish comma separator", () => {
     expect(formatNumber(12.34, "es")).toBe("12,34");
+  });
+
+  it("formats an ISO calendar date as a long Spanish date without shifting the day", () => {
+    expect(formatLongDate("2029-08-28", "es")).toBe("28 de agosto de 2029");
+    expect(formatLongDate("2026-09-17", "es")).toBe("17 de septiembre de 2026");
   });
 
   it("formats compact relative report ages in minutes below an hour", () => {

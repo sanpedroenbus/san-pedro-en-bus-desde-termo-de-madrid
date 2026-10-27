@@ -23,7 +23,7 @@ export function RoutePicker({
             <button
               aria-pressed={selected}
               className={cn(
-                "selection-flow flex min-h-9 items-center justify-center gap-1.5 bg-surface-raised px-1.5 text-sm font-bold transition duration-200 ease-out focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary",
+                "selection-flow flex min-h-11 items-center justify-center gap-1.5 bg-surface-raised px-1.5 text-sm font-bold transition duration-200 ease-out focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary",
                 selected ? "border-transparent" : "text-foreground hover:bg-surface",
               )}
               key={route}

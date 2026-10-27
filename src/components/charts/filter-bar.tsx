@@ -272,7 +272,7 @@ function ProblemSwatch({ active, label, onClick }: { active: boolean; label: str
     <button
       aria-pressed={active}
       className={cn(
-        "filter-swatch filter-swatch-text selection-flow rounded-md border px-2 py-1 text-left font-semibold transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        "filter-swatch filter-swatch-wrap filter-swatch-text selection-flow rounded-md border px-2 py-1 text-left font-semibold transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         active ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-border bg-surface-raised text-muted hover:bg-surface hover:text-foreground",
       )}
       onClick={onClick}

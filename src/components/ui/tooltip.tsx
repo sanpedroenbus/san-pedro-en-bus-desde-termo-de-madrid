@@ -17,7 +17,7 @@ export function InfoTooltip({ label, children }: { label: string; children: Reac
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger
         aria-label={label}
-        className="inline-flex size-5 items-center justify-center rounded-full border border-border bg-surface-raised text-[0.72rem] font-bold text-muted transition hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="hit-slop inline-flex size-5 items-center justify-center rounded-full border border-border bg-surface-raised text-[0.72rem] font-bold text-muted transition hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         type="button"
       >
         ?

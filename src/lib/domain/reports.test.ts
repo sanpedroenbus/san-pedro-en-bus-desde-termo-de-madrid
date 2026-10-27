@@ -22,32 +22,39 @@ describe("reportMatchesProblems", () => {
 });
 
 describe("normalizeUnitCode", () => {
-  it("strips whitespace and uppercases", () => {
+  it("keeps a 1-3 digit unit number, without leading zeros", () => {
     expect(normalizeUnitCode("  51  ")).toBe("51");
-    expect(normalizeUnitCode("sjb 1234")).toBe("SJB1234");
+    expect(normalizeUnitCode("7")).toBe("7");
+    expect(normalizeUnitCode("099")).toBe("99");
   });
 
-  it("accepts a short bus unit number", () => {
-    expect(normalizeUnitCode("51")).toBe("51");
-    expect(normalizeUnitCode("099")).toBe("099");
+  it("treats 4-6 digits as a plate, with or without the SJB prefix", () => {
+    expect(normalizeUnitCode("14285")).toBe("SJB14285");
+    expect(normalizeUnitCode("sjb 14285")).toBe("SJB14285");
+    expect(normalizeUnitCode("SJB-1234")).toBe("SJB1234");
+    expect(normalizeUnitCode("SJB 123456")).toBe("SJB123456");
   });
 
-  it("accepts a full licence plate", () => {
-    expect(normalizeUnitCode("sjb1234")).toBe("SJB1234");
+  it("matches the official zero-padded plate format to what riders read on the bus", () => {
+    // The authorized-fleet document writes SJB014285; the bus shows SJB 14285.
+    expect(normalizeUnitCode("SJB014285")).toBe(normalizeUnitCode("SJB 14285"));
   });
 
   it("returns null for empty input", () => {
     expect(normalizeUnitCode("")).toBeNull();
     expect(normalizeUnitCode("   ")).toBeNull();
+    expect(normalizeUnitCode("000")).toBeNull();
   });
 
-  it("returns null for input longer than ten characters", () => {
-    expect(normalizeUnitCode("ABCDEFGHIJK")).toBeNull(); // 11 chars
-    expect(normalizeUnitCode("ABCDEFGHIJ")).toBe("ABCDEFGHIJ"); // exactly 10 chars
+  it("rejects SJB with too few or too many digits, and over-long numbers", () => {
+    expect(normalizeUnitCode("SJB 51")).toBeNull();
+    expect(normalizeUnitCode("SJB")).toBeNull();
+    expect(normalizeUnitCode("SJB 1234567")).toBeNull();
+    expect(normalizeUnitCode("1234567")).toBeNull();
   });
 
-  it("returns null for characters outside A-Z0-9", () => {
-    expect(normalizeUnitCode("AB-1234")).toBeNull();
+  it("rejects other letters and symbols", () => {
+    expect(normalizeUnitCode("ABC123")).toBeNull();
     expect(normalizeUnitCode("unidad#5")).toBeNull();
   });
 });
