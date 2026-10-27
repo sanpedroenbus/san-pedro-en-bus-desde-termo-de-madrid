@@ -166,7 +166,7 @@ test("report form links out to the open-ended report form", async ({ page }) => 
   const openReportLink = page.getByRole("link", { name: /Contánoslo acá/ });
   await expect(openReportLink).toBeVisible();
   await expect(openReportLink).toHaveAttribute("target", "_blank");
-  await expect(openReportLink).toHaveAttribute("href", "https://forms.gle/v7gyawttsTiSD77a6");
+  await expect(openReportLink).toHaveAttribute("href", /^https:\/\/docs\.google\.com\/forms\/d\/e\/[^/]+\/viewform\?usp=pp_url&entry\.2001078048=/);
 });
 
 test("schedules page summarizes authorized frequencies per route and links the official PDF", async ({ page, request }) => {

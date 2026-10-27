@@ -203,4 +203,28 @@ describe("ReportForm", () => {
 
     expect(await screen.findByRole("button", { name: ROUTE_LABELS[ROUTES[0]], pressed: true })).toBeInTheDocument();
   });
+
+  it("opens the open-ended form pre-filled with the selected route and normalized unit", async () => {
+    const user = userEvent.setup();
+    render(<ReportForm dictionary={esMessages} locale="es" />);
+    const link = screen.getByRole("link", { name: new RegExp(esMessages.reportForm.openReportLink) });
+
+    await user.click(screen.getByRole("button", { name: ROUTE_LABELS.LA_CAMPINA }));
+    await user.type(screen.getByRole("textbox"), "sjb 014285");
+
+    const url = new URL(link.getAttribute("href")!);
+    expect(url.origin + url.pathname).toBe("https://docs.google.com/forms/d/e/1FAIpQLSczJF46OkDbqH11_xVnd9P_ipJmy-PpFJSPCviTKgLMlud3fA/viewform");
+    expect(url.searchParams.get("entry.2001078048")).toBe("La Campiña");
+    expect(url.searchParams.get("entry.15557363")).toBe("SJB14285");
+  });
+
+  it("leaves the unit out of the form link while the unit field is empty or invalid", async () => {
+    const user = userEvent.setup();
+    render(<ReportForm dictionary={esMessages} locale="es" />);
+    const link = screen.getByRole("link", { name: new RegExp(esMessages.reportForm.openReportLink) });
+    expect(new URL(link.getAttribute("href")!).searchParams.has("entry.15557363")).toBe(false);
+
+    await user.type(screen.getByRole("textbox"), "abc");
+    expect(new URL(link.getAttribute("href")!).searchParams.has("entry.15557363")).toBe(false);
+  });
 });

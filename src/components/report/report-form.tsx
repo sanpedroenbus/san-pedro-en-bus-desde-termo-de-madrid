@@ -16,13 +16,9 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { ProblemSelector } from "./problem-selector";
 import { getLastReportRoute, saveLastReportRoute } from "./last-route";
+import { getOpenReportFormUrl } from "./open-report-form";
 import { clearReportCooldown, getReportCooldownRemainingMs, markReportSubmitted, REPORT_COOLDOWN_MS } from "./report-cooldown";
 import { RoutePicker } from "./route-picker";
-
-// This form is for open-ended reports that don't fit the fixed 16-problem
-// catalogue -- it's intentionally external and not wired into the reports
-// API or the statistics dashboard (see PRODUCT.md).
-const OPEN_REPORT_FORM_URL = "https://forms.gle/v7gyawttsTiSD77a6";
 
 type ApiErrorReason = "duplicate" | "invalid" | "rate_limited" | "server_error";
 
@@ -197,7 +193,7 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
         {dictionary.reportForm.openReportPrompt}{" "}
         <a
           className="inline-flex items-center gap-1 font-semibold text-foreground underline decoration-border underline-offset-2 transition-colors hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          href={OPEN_REPORT_FORM_URL}
+          href={getOpenReportFormUrl(route, normalizedUnit)}
           rel="noreferrer"
           target="_blank"
         >

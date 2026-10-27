@@ -66,7 +66,7 @@ Avoid:
 
 ### Open-ended reports
 
-Riders sometimes have something to report that doesn't fit the fixed 16-problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (a Google Form, `OPEN_REPORT_FORM_URL` in `report-form.tsx`) for that kind of report.
+Riders sometimes have something to report that doesn't fit the fixed 16-problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (a Google Form, opened pre-filled with the route and unit already picked — `src/components/report/open-report-form.ts`) for that kind of report.
 
 This form is intentionally outside the app's own data model:
 

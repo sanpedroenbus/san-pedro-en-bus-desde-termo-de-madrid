@@ -7,7 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: defaultAppCopy.title,
     short_name: defaultAppCopy.shortName,
     description: defaultAppCopy.description,
-    start_url: "/es",
+    // Installed from the post-report prompt, so the home-screen icon opens straight into reporting.
+    start_url: "/es/reportar",
     display: "standalone",
     background_color: THEME_COLORS.lightBackground,
     theme_color: THEME_COLORS.lightBackground,
