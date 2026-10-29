@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { isRoute, ROUTE_COLORS, ROUTE_LABELS, ROUTES } from "./routes";
 
 describe("routes", () => {
-  it("defines exactly nine distinct routes", () => {
-    expect(ROUTES).toHaveLength(9);
-    expect(new Set(ROUTES).size).toBe(9);
+  it("defines exactly ten distinct routes", () => {
+    expect(ROUTES).toHaveLength(10);
+    expect(new Set(ROUTES).size).toBe(10);
   });
 
   it("validates known routes and rejects everything else", () => {

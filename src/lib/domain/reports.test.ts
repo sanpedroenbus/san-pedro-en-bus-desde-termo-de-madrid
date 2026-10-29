@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDuplicateCandidate, normalizeUnitCode, parseReportInput, reportMatchesProblems, type Report, type ReportInput } from "./reports";
+import { isDuplicateCandidate, normalizeUnitCode, normalizeUnitLookup, parseReportInput, reportMatchesProblems, type Report, type ReportInput } from "./reports";
 
 describe("reportMatchesProblems", () => {
   it("matches when no problems are selected (no-op filter)", () => {
@@ -18,6 +18,24 @@ describe("reportMatchesProblems", () => {
 
   it("does not require the report to carry every selected problem", () => {
     expect(reportMatchesProblems({ problems: ["hacinados"] }, ["hacinados", "cucarachas"])).toBe(true);
+  });
+});
+
+describe("normalizeUnitLookup", () => {
+  it("normalizes like normalizeUnitCode when it can", () => {
+    expect(normalizeUnitLookup("sjb 014285")).toBe("SJB14285");
+    expect(normalizeUnitLookup("051")).toBe("51");
+  });
+
+  it("still finds legacy stored codes that the input format rejects", () => {
+    expect(normalizeUnitCode("SJ0912")).toBeNull();
+    expect(normalizeUnitLookup(" sj0912 ")).toBe("SJ0912");
+  });
+
+  it("rejects anything that could not be stored", () => {
+    expect(normalizeUnitLookup("")).toBeNull();
+    expect(normalizeUnitLookup("SJB-12;--")).toBeNull();
+    expect(normalizeUnitLookup("A".repeat(11))).toBeNull();
   });
 });
 

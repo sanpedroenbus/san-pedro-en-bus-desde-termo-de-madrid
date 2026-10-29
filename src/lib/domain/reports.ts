@@ -27,6 +27,8 @@ const UNIT_INPUT_PATTERN = /^(SJB)?(\d+)$/;
 const UNIT_NUMBER_MAX_DIGITS = 3;
 const PLATE_MIN_DIGITS = 4;
 const PLATE_MAX_DIGITS = 6;
+// Matches the reports.unit CHECK constraint: what can already be stored.
+const STORED_UNIT_PATTERN = /^[A-Z0-9]{1,10}$/;
 
 export const reportInputSchema = z.object({
   route: z.string().refine(isRoute),
@@ -50,6 +52,14 @@ export function normalizeUnitCode(value: string): string | null {
   if (digits.length >= PLATE_MIN_DIGITS && digits.length <= PLATE_MAX_DIGITS) return PLATE_PREFIX + digits;
   if (!prefix && digits.length >= 1 && digits.length <= UNIT_NUMBER_MAX_DIGITS) return digits;
   return null;
+}
+
+// For looking up existing units (explorer, unit API), not for new reports:
+// codes stored before the current format (0004 left non-matching ones as-is,
+// e.g. "SJ0912") must stay findable, so fall back to the stored shape.
+export function normalizeUnitLookup(value: string): string | null {
+  const upper = value.trim().toUpperCase();
+  return normalizeUnitCode(upper) ?? (STORED_UNIT_PATTERN.test(upper) ? upper : null);
 }
 
 export function parseReportInput(input: unknown) {

@@ -21,7 +21,7 @@ import { CHART_TOKENS, SERIES_CHART_COLORS } from "@/lib/design/tokens";
 import { ROUTE_COLORS, ROUTE_LABELS, type Route } from "@/lib/domain/routes";
 import type { Problem, ProblemCategory } from "@/lib/domain/problems";
 import type { TimeRange } from "@/lib/domain/ranges";
-import { normalizeUnitCode } from "@/lib/domain/reports";
+import { normalizeUnitLookup } from "@/lib/domain/reports";
 import { getProblemLabel } from "@/components/report/problem-label";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -122,7 +122,6 @@ export function ProblemsChartCard({
 const CATEGORY_COLORS: Record<ProblemCategory, string> = {
   fiabilidad: SERIES_CHART_COLORS[0],
   paradas: SERIES_CHART_COLORS[1],
-  seguridad: SERIES_CHART_COLORS[2],
   condicion: SERIES_CHART_COLORS[3],
   convivencia: SERIES_CHART_COLORS[4],
 };
@@ -322,7 +321,7 @@ function UnitExplorer({
   const optionUnits = useMemo(() => new Set([...options.map((option) => option.unit), ...(activeUnit ? [activeUnit] : [])]), [activeUnit, options]);
 
   function submitSelection() {
-    const normalized = normalizeUnitCode(draftUnit);
+    const normalized = normalizeUnitLookup(draftUnit);
     if (!normalized || !optionUnits.has(normalized)) {
       setError(dictionary.explore.unitExplorer.invalid);
       return;
@@ -402,7 +401,10 @@ function UnitExplorer({
                 <XAxis
                   axisLine={false}
                   dataKey="label"
-                  interval={getTimeAxisTickInterval(activeSelection.history.length, selectedRange)}
+                  // Unit history labels are dates whatever the selected range, so
+                  // let Recharts measure them and drop the ones that would overlap.
+                  interval="preserveStartEnd"
+                  minTickGap={CHART_TOKENS.minTickGapPx}
                   tickLine={false}
                 />
                 <YAxis axisLine={false} allowDecimals={false} tickLine={false} />

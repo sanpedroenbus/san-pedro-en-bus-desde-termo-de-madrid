@@ -81,7 +81,7 @@ describe("buildDashboardData", () => {
   it("rolls problem summaries up into category summaries consistently, including the multi-problem case", () => {
     const data = buildDashboardData(
       [
-        // hacinados + cucarachas are both "condicion"; acoso is "seguridad".
+        // hacinados + cucarachas are both "condicion"; acoso is "convivencia".
         report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"] }),
         report({ id: "2", route: "SABANILLA", problems: ["olia_mal_sucio"] }),
       ],
@@ -95,8 +95,8 @@ describe("buildDashboardData", () => {
 
     const condicion = data.categorySummaries.find((entry) => entry.category === "condicion");
     expect(condicion?.reports).toBe(3); // hacinados + cucarachas + olia_mal_sucio
-    const seguridad = data.categorySummaries.find((entry) => entry.category === "seguridad");
-    expect(seguridad?.reports).toBe(1);
+    const convivencia = data.categorySummaries.find((entry) => entry.category === "convivencia");
+    expect(convivencia?.reports).toBe(1);
   });
 
   it("excludes hidden reports from every aggregate", () => {

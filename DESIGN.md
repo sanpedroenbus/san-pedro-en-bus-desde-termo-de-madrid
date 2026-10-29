@@ -134,7 +134,7 @@ The system rejects official-transit-company mimicry, generic complaint-counter d
 
 ## 2. Colors
 
-The palette is creamy civic utility with a quiet green primary, a blue-black dark theme, distinct route-identity colors, and a five-category problem palette.
+The palette is creamy civic utility with a quiet green primary, a blue-black dark theme, distinct route-identity colors, and a four-category problem palette.
 
 ### Primary
 
@@ -160,7 +160,11 @@ Two routes (La Europa at 220° and La Campiña at 250°) sit only 30° apart in 
 
 ### Problem categories
 
-Five categories, used only for the reports-per-category dashboard module — never for the problem-selector UI in the report form, which keeps all 16 problems equal-weight (see Named Rules). Currently drawn from the existing `SERIES_CHART_COLORS` palette in `src/lib/design/tokens.ts` (originally built for a since-removed car-series chart, now repurposed). A dedicated `CATEGORY_COLORS` token keyed by `fiabilidad` / `paradas` / `seguridad` / `condicion` / `convivencia` should replace that repurposing once Phase 7 lands, so the naming stops implying an unrelated concept.
+Four categories, used only for the reports-per-category dashboard module — never for the problem-selector UI in the report form, which keeps all 20 problems equal-weight (see Named Rules). Currently drawn from the existing `SERIES_CHART_COLORS` palette in `src/lib/design/tokens.ts` (originally built for a since-removed car-series chart, now repurposed). A dedicated `CATEGORY_COLORS` token keyed by `fiabilidad` / `paradas` / `condicion` / `convivencia` should replace that repurposing once Phase 7 lands, so the naming stops implying an unrelated concept.
+
+### Home actions
+
+The two home actions use a black-and-yellow pair: Reportar is a black card (`--report-button`) with a yellow border and orbit (`--action-report-border`); Estadísticas is a yellow card (`--explore-fill`, `--explore-border`) with dark ink (`--explore-contrast`). These tokens are for the home actions only. The Reportar icon is a custom sign (`public/report-icon.png`) drawn as a CSS mask over `currentColor`, so it takes the surrounding text color like a lucide icon.
 
 ### Neutral
 
@@ -178,7 +182,7 @@ Five categories, used only for the reports-per-category dashboard module — nev
 
 **The Selected Fill Rule.** Unselected chips stay neutral with a colored dot or short mark. Selected chips may use the identity color as a fill with contrast-correct white or black text plus a check icon or outline.
 
-**The No Bait Rule.** In the problem selector, all 16 problems stay equal visual weight until selected. Grouping by category is for scannability only — never color-code or rank problems by severity within the form.
+**The No Bait Rule.** In the problem selector, all 20 problems stay equal visual weight until selected. Grouping by category is for scannability only — never color-code or rank problems by severity within the form.
 
 **The No Decorative Wallpaper Rule.** Color belongs in data, selected states, and primary action motion, not in the global page background. The global app glow is allowed only as a subtle neutral shell treatment.
 
@@ -201,7 +205,7 @@ Five categories, used only for the reports-per-category dashboard module — nev
 
 ### Named Rules
 
-**The Data First Rule.** Numbers, route names, and unit identifiers must align cleanly and use tabular settings. If a chart label wraps badly on mobile, wrap or shorten the label before shrinking the type below readable size — see the 16-problem chart's wrapped-tick approach in `dashboard-charts.tsx`.
+**The Data First Rule.** Numbers, route names, and unit identifiers must align cleanly and use tabular settings. If a chart label wraps badly on mobile, wrap or shorten the label before shrinking the type below readable size — see the problems chart's wrapped-tick approach in `dashboard-charts.tsx`.
 
 **The Balanced Wrap Rule.** Headings use `text-wrap: balance` and paragraphs `text-wrap: pretty` (set once in `globals.css` base layer) so lines break evenly for glance reading on the move.
 
@@ -264,14 +268,14 @@ The system is flat by default. Depth comes from tonal layering, borders, spacing
 
 ### Problem Selector
 
-Sixteen problems grouped into five categories (`fiabilidad`, `paradas`, `seguridad`, `condicion`, `convivencia`) as nested `<fieldset>`/`<legend>` sections under one outer "¿Qué pasó?" fieldset. Multi-select — a single trip commonly has more than one problem. Every option is an equal-weight toggle button regardless of category or position; grouping exists purely to make 16 options scannable on a phone, never to imply one problem matters more than another (see the No Bait Rule in §2).
+Twenty problems grouped into four categories (`fiabilidad` labelled "Horarios", `paradas`, `condicion`, `convivencia`) as nested `<fieldset>`/`<legend>` sections under one outer "¿Qué pasó?" fieldset. Multi-select — a single trip commonly has more than one problem. Every option is an equal-weight toggle button regardless of category or position; grouping exists purely to make 20 options scannable on a phone, never to imply one problem matters more than another (see the No Bait Rule in §2).
 
 ### Dashboard Modules
 
 Dashboard modules are evidence blocks, not generic metric cards. The fixed module order:
 
-1. **Reports per route** — the lead module, horizontal bars in route-identity color, all 9 routes shown, never truncated. Never replaced or preceded by a single network-wide number.
-2. **Reports per problem** — horizontal bars across all 16 problems, single accent fill (not route or category color), value labels rather than relying on hover (mobile has no hover).
+1. **Reports per route** — the lead module, horizontal bars in route-identity color, all 10 routes shown, never truncated. Never replaced or preceded by a single network-wide number.
+2. **Reports per problem** — horizontal bars across all 20 problems, single accent fill (not route or category color), value labels rather than relying on hover (mobile has no hover).
 3. **Reports per category** — the 5-category rollup, a more scannable summary of #2, using the problem-category palette from §2.
 4. **Report volume over time** — line chart for the selected range, with a computed tick interval so long ranges (`Todo`, hundreds of daily buckets) don't produce overlapping date labels.
 5. **Most-reported units** — ranked list, clicking a row opens the unit explorer below.
@@ -282,7 +286,7 @@ There is no Termo Indicator, fleet-coverage percentage, confidence score, or any
 
 ### Logo / App Icon
 
-The current mark (a red diamond behind a blue thermometer, inherited from Termo de Madrid) is a placeholder pending a San Pedro en Bus-specific identity (`makeover.md` P5). No logo motion.
+A black bus on a yellow rounded square (`public/icon.svg`), matching the home actions' black-and-yellow pair. The favicon, PWA and Apple touch PNGs and `src/app/favicon.ico` are rendered from that SVG — regenerate them together when it changes. No logo motion.
 
 ## 6. Layout Principles
 
@@ -315,7 +319,7 @@ The app is read one-handed on a moving bus. Layout serves glanceability first: o
 - **Don't** build a generic complaint counter that treats raw complaint volume as truth.
 - **Don't** lead with a single network average that hides a bad route.
 - **Don't** reintroduce a weighted scoring index, time decay, or fleet-coverage percentage.
-- **Don't** rank or color-code the 16 problems by severity in the report form.
+- **Don't** rank or color-code the 20 problems by severity in the report form.
 - **Don't** use glassmorphism or `backdrop-filter` blur on any surface — it is also a GPU cost on low-end phones.
 - **Don't** use border radii above 16px on cards, panels, or inputs.
 - **Don't** combine a 1px card border with soft shadows above 8px blur.

@@ -11,6 +11,7 @@ export const METHODOLOGY_SECTIONS = [
   { id: "mission", labelKey: "missionTitle" },
   { id: "score", labelKey: "scoreTitle" },
   { id: "fleet", labelKey: "fleetTitle" },
+  { id: "limits", labelKey: "limitsTitle" },
 ] as const;
 
 export function MethodologyNavigation({ dictionary }: { dictionary: Dictionary }) {

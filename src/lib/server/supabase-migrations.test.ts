@@ -23,16 +23,17 @@ describe("Supabase migration: 0001_initial.sql", () => {
       "0003_retire_no_paso_google_maps.sql",
       "0004_ramp_problem_and_unit_normalization.sql",
       "0005_collaborators.sql",
+      "0006_catalogue_revision_and_carmiol.sql",
     ]);
   });
 
-  it("defines a reports table with a route CHECK constraint covering every current route and no others", () => {
+  it("defines a reports table with a route CHECK constraint listing only real routes (0006 adds the newer ones)", () => {
     const routeCheckMatch = migration.match(/route text not null check \(\s*route in \(([\s\S]*?)\)\s*\),/);
     expect(routeCheckMatch).not.toBeNull();
     const listedRoutes = routeCheckMatch![1].match(/'([A-Z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
 
-    expect(new Set(listedRoutes)).toEqual(new Set(ROUTES));
-    expect(listedRoutes).toHaveLength(ROUTES.length);
+    expect(listedRoutes.length).toBeGreaterThan(0);
+    for (const route of listedRoutes) expect(ROUTES).toContain(route);
   });
 
   it("requires at least one problem", () => {
@@ -178,13 +179,11 @@ describe("Supabase migration: 0003_retire_no_paso_google_maps.sql", () => {
 describe("Supabase migration: 0004_ramp_problem_and_unit_normalization.sql", () => {
   const migration0004 = readFileSync(join(root, "supabase/migrations/0004_ramp_problem_and_unit_normalization.sql"), "utf8");
 
-  it("replaces the problems constraint with one listing every current problem plus the retired one", () => {
+  it("replaces the problems constraint, adding the ramp problem and keeping the retired one", () => {
     expect(migration0004).toContain("alter table public.reports drop constraint reports_problems_check;");
     expect(migration0004).toContain("cardinality(problems) > 0");
     const listed = migration0004.match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
-    for (const problem of PROBLEMS) {
-      expect(listed).toContain(problem);
-    }
+    expect(listed).toContain("rampa_no_funciono");
     expect(listed).toContain("no_paso_google_maps");
   });
 
@@ -211,5 +210,22 @@ describe("Supabase migration: 0005_collaborators.sql", () => {
     expect(migration0005).toContain("consented_at timestamptz not null");
     expect(migration0005).toContain("create unique index collaborators_email_key");
     expect(migration0005).toContain("create unique index collaborators_whatsapp_key");
+  });
+});
+
+describe("Supabase migration: 0006_catalogue_revision_and_carmiol.sql", () => {
+  const migration0006 = readFileSync(join(root, "supabase/migrations/0006_catalogue_revision_and_carmiol.sql"), "utf8");
+  const [problemsSql, reportsRouteSql, unitsRouteSql] = migration0006.split(/alter table public\.\w+ drop constraint/).slice(1);
+  const ids = (sql: string) => sql.match(/'([A-Za-z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
+
+  it("allows every current problem plus the retired one, and nothing else", () => {
+    expect(new Set(ids(problemsSql))).toEqual(new Set([...PROBLEMS, "no_paso_google_maps"]));
+  });
+
+  it("allows exactly the current routes on both reports and units", () => {
+    expect(reportsRouteSql).toContain("reports_route_check");
+    expect(unitsRouteSql).toContain("units_route_check");
+    expect(new Set(ids(reportsRouteSql))).toEqual(new Set(ROUTES));
+    expect(new Set(ids(unitsRouteSql))).toEqual(new Set(ROUTES));
   });
 });

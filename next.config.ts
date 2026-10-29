@@ -28,7 +28,8 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  allowedDevOrigins: ["127.0.0.1"],
+  // Private LAN addresses too, so the dev server can be tried from a phone.
+  allowedDevOrigins: ["127.0.0.1", "192.168.*.*", "10.*.*.*"],
   devIndicators: false,
   async headers() {
     return [

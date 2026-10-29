@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { parseDashboardRange, parseSelectedProblems, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
-import { normalizeUnitCode } from "@/lib/domain/reports";
+import { normalizeUnitLookup } from "@/lib/domain/reports";
 import { getCachedUnitDetail, normalizeDashboardCacheKey } from "@/lib/server/dashboard-cache";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
-  const unit = normalizeUnitCode(params.get("unidad") ?? "");
+  const unit = normalizeUnitLookup(params.get("unidad") ?? "");
   if (!unit) return NextResponse.json({ selection: null, reason: "invalid" }, { status: 400 });
 
   const key = normalizeDashboardCacheKey({

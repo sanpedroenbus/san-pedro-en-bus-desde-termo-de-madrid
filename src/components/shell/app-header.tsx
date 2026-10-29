@@ -26,7 +26,7 @@ export function AppHeader({
   const navItems = [
     { href: `/${locale}`, label: dictionary.common.home, icon: Home, path: "" },
     { href: `/${locale}/reportar`, label: dictionary.common.report, icon: ReportActionIcon, path: "/reportar", iconClassName: "text-heat-infierno" },
-    { href: `/${locale}/explorar`, label: dictionary.common.explore, icon: ExploreActionIcon, path: "/explorar", iconClassName: "h-4 w-5 scale-[0.67]" },
+    { href: `/${locale}/explorar`, label: dictionary.common.explore, icon: ExploreActionIcon, path: "/explorar" },
     { href: `/${locale}/horarios`, label: dictionary.common.schedules, icon: Clock, path: "/horarios" },
     {
       href: `/${locale}/metodologia`,

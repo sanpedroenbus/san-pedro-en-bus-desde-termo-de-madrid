@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Clock3, Flame, ThermometerSun } from "lucide-react";
+import { Bus, Clock3, Flame } from "lucide-react";
 import { RecentReportRow } from "@/components/report/recent-report-row";
 import { ExploreActionIcon, ReportActionIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
@@ -54,9 +54,9 @@ export async function HomePageContent({
               <Link href={exploreHref}>
                 <span>
                   <span className="block text-base">{dictionary.common.explore}</span>
-                  <span className="mt-px block text-xs font-normal text-muted">{dictionary.home.exploreDescription}</span>
+                  <span className="mt-px block text-xs font-normal opacity-80">{dictionary.home.exploreDescription}</span>
                 </span>
-                <ExploreActionIcon className="home-action-icon h-[1.875rem] w-9" />
+                <ExploreActionIcon className="home-action-icon size-[1.875rem]" />
               </Link>
             </Button>
           </div>
@@ -89,14 +89,14 @@ async function HomeReports({
   return (
     <>
       <a
-        className="flex min-h-16 items-center gap-3 rounded-md border border-border bg-surface-raised p-3 transition duration-200 ease-out hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="flex min-h-16 items-center gap-3 rounded-md bg-surface-raised p-3 transition duration-200 ease-out hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         data-testid="home-report-count-banner"
         href="#home-recent-reports"
       >
         <span className="shrink-0 font-mono text-4xl font-semibold leading-none tracking-[-0.035em] tabular-nums sm:text-5xl" data-testid="home-report-count">{dashboard.reportsLastDay}</span>
         <span className="min-w-0 flex-1 text-pretty text-sm font-semibold leading-4 text-muted sm:text-base sm:leading-5">{dictionary.home.reportsInWindow}</span>
         <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-heat-infierno-soft text-heat-infierno" data-testid="home-report-count-icon">
-          <ThermometerSun aria-hidden="true" className="size-6" />
+          <Bus aria-hidden="true" className="size-6" />
         </span>
       </a>
 
@@ -147,7 +147,7 @@ async function HomeReports({
 function HomeReportsSkeleton({ dictionary }: { dictionary: Awaited<ReturnType<typeof getDictionary>> }) {
   return (
     <>
-      <div className="flex min-h-16 items-center gap-3 rounded-md border border-border bg-surface-raised p-3">
+      <div className="flex min-h-16 items-center gap-3 rounded-md bg-surface-raised p-3">
         <div className="h-12 w-16 animate-pulse rounded-sm bg-surface" />
         <div className="h-5 flex-1 animate-pulse rounded-sm bg-surface" />
         <div className="size-11 animate-pulse rounded-md bg-surface" />
@@ -170,7 +170,7 @@ function HomeReportsSkeleton({ dictionary }: { dictionary: Awaited<ReturnType<ty
 }
 
 function TrainSilhouette() {
-  return <span aria-hidden="true" className="home-train-silhouette mx-auto mb-1 h-16 w-48 text-muted opacity-35" />;
+  return <span aria-hidden="true" className="home-train-silhouette mx-auto mb-1 aspect-[900/369] w-64 text-muted opacity-60" />;
 }
 
 function getTopRecentRoutes(reports: Report[]) {

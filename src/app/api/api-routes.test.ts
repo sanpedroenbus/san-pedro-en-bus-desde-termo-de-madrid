@@ -26,6 +26,10 @@ vi.mock("@/lib/server/dashboard-cache", () => dashboardCacheMock);
 vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
 }));
+const afterMock = vi.hoisted(() => vi.fn());
+const reportAlertsMock = vi.hoisted(() => ({ sendReportAlerts: vi.fn() }));
+vi.mock("next/server", async (importOriginal) => ({ ...(await importOriginal<typeof import("next/server")>()), after: afterMock }));
+vi.mock("@/lib/server/report-alerts", () => reportAlertsMock);
 
 describe("POST /api/reports", () => {
   afterEach(() => {
@@ -97,6 +101,15 @@ describe("POST /api/reports", () => {
       { route: "CEDROS", unit: "51", problems: ["hacinados"] },
       expect.any(Request),
     );
+
+    // Owner alerts run after the response, and a failing push is swallowed.
+    expect(afterMock).toHaveBeenCalledTimes(1);
+    reportAlertsMock.sendReportAlerts.mockRejectedValue(new Error("ntfy down"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    await afterMock.mock.calls[0][0]();
+    expect(reportAlertsMock.sendReportAlerts).toHaveBeenCalledWith("CEDROS");
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("maps each repository rejection reason to its documented HTTP status", async () => {

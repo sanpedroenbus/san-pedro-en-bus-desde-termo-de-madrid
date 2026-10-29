@@ -11,16 +11,18 @@
   --page-glow: oklch(0.89 0.055 78 / 0.64);
   --nav-surface: oklch(1 0.003 96 / 0.94);
   --drawer-surface: oklch(0.997 0.006 96);
-  --action-report-border: oklch(0.59 0.21 32 / 0.62);
+  --action-report-border: oklch(0.86 0.17 95);
   --action-report-sheen: oklch(1 0 0 / 0.28);
   --accent: oklch(0.72 0.165 72);
   --accent-contrast: oklch(0.19 0.018 160);
-  --report-button: oklch(0.72 0.165 72);
+  --report-button: oklch(0.2 0 0);
   --report-particle: oklch(0.99 0.055 92);
   --report-active-blur: oklch(0.78 0.16 74 / 0.48);
   --primary: oklch(0.52 0.125 160);
   --primary-contrast: oklch(0.99 0 0);
-  --explore-accent: oklch(0.53 0.18 250);
+  --explore-fill: oklch(0.9 0.16 98);
+  --explore-border: oklch(0.8 0.16 90);
+  --explore-contrast: oklch(0.19 0.018 160);
   /* Legacy heat-state tokens: still consumed by out-of-scope component code
      (action-icons.tsx, app-header.tsx, home/reportar pages) via the
      --color-heat-* Tailwind exposure below. Kept working as-is pending the
@@ -33,7 +35,6 @@
   --heat-infierno-soft: oklch(0.955 0.04 32);
   --category-fiabilidad: oklch(0.55 0.18 255);
   --category-paradas: oklch(0.62 0.14 180);
-  --category-seguridad: oklch(0.55 0.2 15);
   --category-condicion: oklch(0.68 0.15 85);
   --category-convivencia: oklch(0.55 0.17 320);
   --success: oklch(0.555 0.13 150);
@@ -75,11 +76,13 @@
   --page-glow: oklch(0.34 0.075 245 / 0.5);
   --nav-surface: oklch(0.19 0.04 250 / 0.9);
   --drawer-surface: oklch(0.16 0.036 252);
-  --action-report-border: oklch(0.65 0.2 35 / 0.7);
+  --action-report-border: oklch(0.86 0.17 95);
   --action-report-sheen: oklch(1 0 0 / 0.22);
   --accent: oklch(0.74 0.15 76);
   --accent-contrast: oklch(0.145 0.036 252);
-  --report-button: oklch(0.68 0.16 72);
+  --report-button: oklch(0.1 0 0);
+  --explore-fill: oklch(0.85 0.15 95);
+  --explore-border: oklch(0.9 0.16 98);
   --report-particle: oklch(0.98 0.04 92);
   --report-active-blur: oklch(0.78 0.16 74 / 0.42);
 }
@@ -101,7 +104,6 @@
   --color-heat-infierno-soft: var(--heat-infierno-soft);
   --color-category-fiabilidad: var(--category-fiabilidad);
   --color-category-paradas: var(--category-paradas);
-  --color-category-seguridad: var(--category-seguridad);
   --color-category-condicion: var(--category-condicion);
   --color-category-convivencia: var(--category-convivencia);
   --color-success: var(--success);
@@ -171,7 +173,7 @@ body {
   inset: 0;
   border-radius: inherit;
   padding: 2px;
-  background: conic-gradient(from var(--report-border-angle), transparent 0 72%, var(--report-particle) 78%, var(--heat-infierno) 84%, transparent 92%);
+  background: conic-gradient(from var(--report-border-angle), transparent 0 72%, var(--report-particle) 78%, var(--action-report-border) 84%, transparent 92%);
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
   animation: report-border-orbit 2.8s linear infinite;
@@ -272,9 +274,15 @@ body {
 }
 
 .home-explore-action {
-  border-color: color-mix(in oklch, var(--border), var(--explore-accent) 48%);
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--surface-raised), var(--explore-accent) 14%), var(--surface-raised));
+  border-color: var(--explore-border);
+  background: var(--explore-fill);
+  color: var(--explore-contrast);
+}
+
+.report-action-icon {
+  display: inline-block;
+  background: currentColor;
+  mask: url("/report-icon.png") center / contain no-repeat;
 }
 
 .home-train-silhouette {

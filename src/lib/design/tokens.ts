@@ -13,12 +13,12 @@ export const CHART_TOKENS = {
   moduleHeightClass: "h-56",
   compactMargin: { left: -12, right: 8, top: 8, bottom: 0 },
   tooltipPayloadLimit: 8,
+  minTickGapPx: 12,
 } as const;
 
 export const CATEGORY_COLORS = {
   fiabilidad: "oklch(0.55 0.18 255)",
   paradas: "oklch(0.62 0.14 180)",
-  seguridad: "oklch(0.55 0.20 15)",
   condicion: "oklch(0.68 0.15 85)",
   convivencia: "oklch(0.55 0.17 320)",
 } as const;
@@ -67,7 +67,7 @@ export const SOCIAL_IMAGE_TOKENS = {
   navMenuLineWidthPx: 24,
   navMenuLineHeightPx: 3,
   busWidthPx: 330,
-  busHeightPx: 100,
+  busHeightPx: 135,
   busOpacity: 0.28,
   actionPaddingBlockPx: 10,
   actionPaddingInlinePx: 24,

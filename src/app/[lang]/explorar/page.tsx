@@ -7,7 +7,7 @@ import { getCachedExplorePageData, normalizeDashboardCacheKey } from "@/lib/serv
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { parseDashboardRange, parseSelectedProblems, parseSelectedRoutes } from "@/lib/domain/dashboard-query";
-import { normalizeUnitCode } from "@/lib/domain/reports";
+import { normalizeUnitLookup } from "@/lib/domain/reports";
 import { notFound } from "next/navigation";
 import ExploreLoading from "./loading";
 
@@ -46,7 +46,7 @@ export async function ExploreContent({
   const selectedRange = parseDashboardRange(search.rango);
   const selectedRoutes = parseSelectedRoutes(search.ruta);
   const selectedProblems = parseSelectedProblems(search.problema);
-  const selectedUnit = search.unidad ? normalizeUnitCode(search.unidad) : null;
+  const selectedUnit = search.unidad ? normalizeUnitLookup(search.unidad) : null;
   const rangeLabel = dictionary.explore.ranges[selectedRange];
   const cacheKey = normalizeDashboardCacheKey({ range: selectedRange, routes: selectedRoutes, problems: selectedProblems });
   const data = await getCachedExplorePageData(cacheKey.rangeKey, cacheKey.routesKey, cacheKey.problemsKey, includeDemo);
@@ -65,7 +65,7 @@ export async function ExploreContent({
 
         <section className="py-6">
           <div className="flex items-center justify-center gap-2">
-            <ExploreActionIcon className="h-6 w-8" />
+            <ExploreActionIcon className="size-6" />
             <h1 className="text-center text-2xl font-[650] tracking-[-0.015em]">{dictionary.explore.title}</h1>
           </div>
           <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">{dictionary.explore.subtitle}</p>

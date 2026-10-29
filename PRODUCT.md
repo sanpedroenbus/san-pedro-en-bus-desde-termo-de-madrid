@@ -19,13 +19,14 @@ The product has two primary actions:
 - Reportar: submit a report for the current trip with route, one or more problems, and an optional unit identifier.
 - Explorar: browse charts, route/unit detail, and filters (route, problem, time range) built from those reports.
 
-A report is not one state chosen from a scale. It is **one or more problems** selected from a fixed catalogue, grouped into five categories:
+A report is not one state chosen from a scale. It is **one or more problems** selected from a fixed catalogue, grouped into four categories:
 
-- Fiabilidad y horarios: unclear schedule, didn't pass on time, took forever, no service at the needed hour.
-- Paradas: didn't stop, stopped somewhere else.
-- Seguridad: unsafe at the stop, violent passenger, harassment, reckless driving.
-- Condición de la unidad: overcrowded, cockroaches, smelled bad or dirty.
-- Convivencia: driver mistreatment, disruptive volume, a passenger without headphones.
+- Horarios: unclear schedule, took forever, no service at the needed hour, never came (had to walk or take an Uber/taxi).
+- Paradas: didn't stop, stopped somewhere else, stop structure in poor condition, unsafe at the stop.
+- Condición de la unidad: overcrowded, cockroaches, smelled bad or dirty, ramp didn't work, no accessibility or inclusion conditions.
+- Convivencia: reckless driving, driver or passenger behaved violently or incorrectly, harassment, discrimination, disruptive volume, a passenger without headphones.
+
+A former "Seguridad" category was merged into Paradas and Convivencia; its problem ids are unchanged, so older reports keep counting.
 
 There is no severity scale, no weighted score, and no single number that claims to summarize "how bad" a route is. Counts are plain and unweighted: how many reports, on which route, about which problems, over which range. The Termo de Madrid original this app was forked from built a weighted heat index; that entire mechanism is intentionally absent here.
 
@@ -66,7 +67,7 @@ Avoid:
 
 ### Open-ended reports
 
-Riders sometimes have something to report that doesn't fit the fixed 16-problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (a Google Form, opened pre-filled with the route and unit already picked — `src/components/report/open-report-form.ts`) for that kind of report.
+Riders sometimes have something to report that doesn't fit the fixed problem catalogue. Rather than adding an open-text field to the reports table (which the app deliberately avoids — see above), /reportar links out to an external form (a Google Form, opened pre-filled with the route and unit already picked — `src/components/report/open-report-form.ts`) for that kind of report.
 
 This form is intentionally outside the app's own data model:
 
@@ -127,7 +128,7 @@ Users should be reminded lightly near submission to report only what they are ex
 V1 routes:
 
 - Home: compact civic landing with title, mission sentence, two visible actions, live snapshot, and disclaimer.
-- /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, five categories), optional unit field, success feedback, and an outbound link to an external open-text form for anything that doesn't fit the fixed catalogue (see "Open-ended reports" below).
+- /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, four categories), optional unit field, success feedback, and an outbound link to an external open-text form for anything that doesn't fit the fixed catalogue (see "Open-ended reports" below).
 - /explorar: dashboard with route, problem, and time-range filters, charts, unit/route detail.
 - /horarios: plain-language summary of the service conditions the regulator (CTP) authorizes for Ruta 50 — authorized frequencies per route and day type (range and plain mean, flagged where service has gaps), fleet size, ramps, permit validity — with a call to report and share, and the official record (`public/CTP-DT-DAC-CONS-1105-2026.pdf`) as source. It is context, never combined with report counts into a ratio or score (no reports-per-bus, no compliance percentage) unless this document is revised first.
 - /colaborar: opt-in for riders who want to be contacted about two future projects — mapping the real stops (no public stop list exists) and exploring rider-shared bus tracking for better arrival estimates. Collects an email and/or WhatsApp number, the chosen projects and explicit consent; nothing else. /horarios links to it with tracking preselected. This is an interest list only: no GPS, accounts or tracking exist in v1.
@@ -136,7 +137,7 @@ V1 routes:
 V1 dashboard modules — the six questions the dashboard must answer, and nothing framed as a single score:
 
 1. Reports per route (the lead module — never collapsed into an average).
-2. Reports per problem, across all 16.
+2. Reports per problem, across the whole catalogue.
 3. Reports per problem category, as a more scannable rollup of the above.
 4. Report volume over time, for the selected range.
 5. Most-reported units, ranked, linking into a unit explorer with total reports, routes served, and history.

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createReportForRequest } from "@/lib/server/reports-repository";
+import { sendReportAlerts } from "@/lib/server/report-alerts";
 import { readBoundedJson } from "@/lib/server/request-json";
 import { parseReportInput } from "@/lib/domain/reports";
 
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
   }
 
   revalidateTag("reports", "max");
+  // After the response, so a slow or failing push never delays or breaks a report.
+  const route = result.report.route;
+  after(() => sendReportAlerts(route).catch((error: unknown) => console.error("Failed to send report alerts", error)));
 
   return NextResponse.json({
     ok: true,

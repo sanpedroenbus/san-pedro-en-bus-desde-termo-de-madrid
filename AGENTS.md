@@ -23,7 +23,7 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root â
 - Treat reports as signals, not truth. Dashboards must show confidence and recency where relevant.
 - Do not lead dashboards with a single network average that hides a bad route. Reports-per-route is the lead module.
 - Do not reintroduce a weighted scoring index, time decay, or fleet-coverage percentage. This product counts plainly and unweighted â€” the methodology copy commits to this publicly.
-- A bus report carries **one or more problems** from the fixed 16-item catalogue, grouped into 5 categories (`fiabilidad`, `paradas`, `seguridad`, `condicion`, `convivencia`). It is not a single state chosen from a severity scale.
+- A bus report carries **one or more problems** from the fixed 20-item catalogue, grouped into 4 categories (`fiabilidad` â€” labelled "Horarios", `paradas`, `condicion`, `convivencia`; the former `seguridad` category was merged into `paradas` and `convivencia`). It is not a single state chosen from a severity scale.
 - A "unit" is either a bus unit number (1-3 digits) or a licence plate (4-6 digits, `SJB` prefix optional on input) â€” either is valid in the same optional field. Plates are stored as `SJB` + digits without leading zeros so the official zero-padded format (`SJB014285`) and what riders read on the bus (`SJB 14285`) match; `normalizeUnitCode` in `src/lib/domain/reports.ts` is the single source of that rule. Do not reintroduce the old Metro car-code format (`^[A-Z][0-9]{4,5}$`) or any car-series concept; neither has a bus equivalent.
 
 ## Design Rules
@@ -34,7 +34,7 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root â
 - Use 8px cards/controls by default; 12px only for larger panels/share cards; never exceed 16px radii for cards, panels, or inputs.
 - Do not use glassmorphism, gradient text, decorative grid backgrounds, stripe backgrounds, or large decorative page backgrounds.
 - Route colors identify routes; do not reuse them to encode anything else (severity, category, or status).
-- No problem in the report form may be visually baited or ranked before selection â€” all 16 stay equal weight until chosen, grouped by category for scannability only, not by severity.
+- No problem in the report form may be visually baited or ranked before selection â€” all 20 stay equal weight until chosen, grouped by category for scannability only, not by severity.
 - Motion must convey state, prefer 150-250ms transitions for controls, allow longer structural drawer transitions when they improve spatial clarity, and support `prefers-reduced-motion`.
 - All interactive states need default, hover, focus, active, disabled, loading/error where applicable.
 - Use tooltips/help popovers for methodology details instead of bloating primary UI text.
@@ -57,7 +57,7 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root â
 - Store server timestamps for reports. Do not trust client timestamps for report creation.
 - Rate limiting and duplicate suppression use short-lived private abuse keys only.
 - Include moderation fields in the schema even if no admin UI exists in v1.
-- Seed data must be realistic and dashboard-ready: two routes visibly worse than the rest, varied units (both numbers and plate-style codes), a meaningful share of reports with no unit, and coverage across all five problem categories.
+- Seed data must be realistic and dashboard-ready: two routes visibly worse than the rest, varied units (both numbers and plate-style codes), a meaningful share of reports with no unit, and coverage across all four problem categories.
 
 ## Testing And Verification
 

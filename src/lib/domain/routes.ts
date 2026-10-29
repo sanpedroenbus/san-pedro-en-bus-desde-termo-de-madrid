@@ -8,6 +8,7 @@ export const ROUTES = [
   "BARRIO_PINTO",
   "CEDROS",
   "LA_EUROPA",
+  "CARMIOL",
 ] as const;
 
 export type Route = (typeof ROUTES)[number];
@@ -18,7 +19,7 @@ export type RouteColor = {
   ring: string;
 };
 
-// Distinct hues spaced ~40deg apart around the wheel so all 9 routes stay
+// Distinct hues spaced ~40deg apart around the wheel so the first 9 routes stay
 // tellable apart on a chart legend in both light and dark themes. Lightness
 // is tuned per hue (yellows/oranges read lighter than blues/purples at the
 // same chroma) so textOnFill keeps comfortable contrast against fill.
@@ -32,6 +33,9 @@ export const ROUTE_COLORS: Record<Route, RouteColor> = {
   BARRIO_PINTO: { fill: "oklch(0.70 0.16 60)", textOnFill: "black", ring: "oklch(0.91 0.07 60)" },
   CEDROS: { fill: "oklch(0.58 0.19 340)", textOnFill: "white", ring: "oklch(0.87 0.08 340)" },
   LA_EUROPA: { fill: "oklch(0.50 0.15 220)", textOnFill: "white", ring: "oklch(0.84 0.06 220)" },
+  // No free hue left on the wheel: a low-chroma brown, told apart from
+  // Barrio Pinto's orange by lightness and chroma rather than hue.
+  CARMIOL: { fill: "oklch(0.46 0.08 50)", textOnFill: "white", ring: "oklch(0.84 0.04 50)" },
 };
 
 export const ROUTE_LABELS: Record<Route, string> = {
@@ -44,6 +48,7 @@ export const ROUTE_LABELS: Record<Route, string> = {
   BARRIO_PINTO: "Barrio Pinto",
   CEDROS: "Cedros",
   LA_EUROPA: "La Europa",
+  CARMIOL: "Carmiol",
 };
 
 export function isRoute(value: unknown): value is Route {

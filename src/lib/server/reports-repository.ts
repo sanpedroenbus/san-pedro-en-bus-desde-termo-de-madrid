@@ -306,6 +306,23 @@ export async function createReportForRequest(
   };
 }
 
+// Live (post-cutoff), visible report totals for owner alerts: all routes, and
+// one route since `since`.
+export async function countReportsForAlerts(route: Route, since: Date): Promise<{ total: number; routeRecent: number }> {
+  const supabase = getSupabase();
+  if (!supabase) {
+    const live = getMemoryReports().filter((report) => !report.hiddenAt && report.createdAt >= DEMO_DATA_CUTOFF);
+    return { total: live.length, routeRecent: live.filter((report) => report.route === route && report.createdAt >= since).length };
+  }
+
+  const liveReports = () =>
+    supabase.from("reports").select("id", { count: "exact", head: true }).is("hidden_at", null).gte("created_at", DEMO_DATA_CUTOFF.toISOString());
+  const [total, recent] = await Promise.all([liveReports(), liveReports().eq("route", route).gte("created_at", since.toISOString())]);
+  if (total.error) throw total.error;
+  if (recent.error) throw recent.error;
+  return { total: total.count ?? 0, routeRecent: recent.count ?? 0 };
+}
+
 export async function undoReport(id: string, undoToken: string, now = new Date()) {
   const supabase = getSupabase();
   if (!supabase) {
