@@ -24,6 +24,7 @@ describe("Supabase migration: 0001_initial.sql", () => {
       "0004_ramp_problem_and_unit_normalization.sql",
       "0005_collaborators.sql",
       "0006_catalogue_revision_and_carmiol.sql",
+      "0007_scope_duplicates_to_origin.sql",
     ]);
   });
 
@@ -227,5 +228,19 @@ describe("Supabase migration: 0006_catalogue_revision_and_carmiol.sql", () => {
     expect(unitsRouteSql).toContain("units_route_check");
     expect(new Set(ids(reportsRouteSql))).toEqual(new Set(ROUTES));
     expect(new Set(ids(unitsRouteSql))).toEqual(new Set(ROUTES));
+  });
+});
+
+describe("Supabase migration: 0007_scope_duplicates_to_origin.sql", () => {
+  const migration0007 = readFileSync(join(root, "supabase/migrations/0007_scope_duplicates_to_origin.sql"), "utf8");
+
+  it("only matches duplicates from the same origin, keeping the 0002 signature and grants", () => {
+    const duplicateCheck = migration0007.slice(migration0007.indexOf("select r.id into v_duplicate_id"));
+    expect(duplicateCheck).toMatch(/^select r\.id into v_duplicate_id\s+from public\.reports r\s+where r\.abuse_key = input_abuse_key/);
+    expect(migration0007).toContain("input_no_unit_window_start timestamptz\n)");
+    expect(migration0007).toContain(
+      "grant execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) to service_role;",
+    );
+    expect(migration0007).toContain("revoke execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) from anon, authenticated;");
   });
 });

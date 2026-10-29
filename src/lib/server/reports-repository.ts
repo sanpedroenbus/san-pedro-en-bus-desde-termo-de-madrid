@@ -245,10 +245,11 @@ export async function createReportForRequest(
       if (!input.unit && hasRecentNoUnitReport) {
         return { ok: false, reason: "duplicate" };
       }
-    }
 
-    const recentDuplicate = memoryReports.find((report) => isDuplicateCandidate(input, report, now));
-    if (recentDuplicate) return { ok: false, reason: "duplicate" };
+      // Same origin only, like the create_report RPC: one rider never blocks another.
+      const recentDuplicate = memoryReports.find((report) => report.abuseKey === abuseKey && isDuplicateCandidate(input, report, now));
+      if (recentDuplicate) return { ok: false, reason: "duplicate" };
+    }
 
     const report: MemoryReport = {
       id: crypto.randomUUID(),

@@ -74,6 +74,7 @@ export function reportMatchesProblems(report: Pick<Report, "problems">, selected
   return report.problems.some((problem) => selectedProblems.includes(problem));
 }
 
+// Same-content check only; callers scope it to the same origin (abuse key).
 export function isDuplicateCandidate(
   current: ReportInput,
   previous: Report,

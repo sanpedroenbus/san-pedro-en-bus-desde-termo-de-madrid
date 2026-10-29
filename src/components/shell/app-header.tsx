@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
-import { CircleHelp, Clock, Home } from "lucide-react";
+import { CircleHelp, Clock, HandHeart, Home } from "lucide-react";
 import { AppLogo } from "@/components/ui/app-logo";
 import { ExploreActionIcon, ReportActionIcon } from "@/components/ui/action-icons";
 import { ThemeSegmentedSwitch } from "./theme-toggle";
@@ -28,6 +28,7 @@ export function AppHeader({
     { href: `/${locale}/reportar`, label: dictionary.common.report, icon: ReportActionIcon, path: "/reportar", iconClassName: "text-heat-infierno" },
     { href: `/${locale}/explorar`, label: dictionary.common.explore, icon: ExploreActionIcon, path: "/explorar" },
     { href: `/${locale}/horarios`, label: dictionary.common.schedules, icon: Clock, path: "/horarios" },
+    { href: `/${locale}/colaborar`, label: dictionary.common.collaborate, icon: HandHeart, path: "/colaborar" },
     {
       href: `/${locale}/metodologia`,
       label: dictionary.common.methodology,

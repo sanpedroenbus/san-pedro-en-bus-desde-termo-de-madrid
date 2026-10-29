@@ -15,6 +15,7 @@ export const messages = {
     explore: "Estadísticas",
     methodology: "Misión",
     schedules: "Horarios",
+    collaborate: "Colaborar",
     theme: "Tema",
     menu: "Menú",
     closeMenu: "Cerrar menú",
@@ -42,6 +43,8 @@ export const messages = {
     noReportsCopy: "Si algo no está funcionando bien, podés ser la primera persona en avisar",
     reportDescription: "Contanos qué está pasando con el bus ahora",
     exploreDescription: "Mirá y compartí los problemas y tendencias de las distintas rutas",
+    involvePrompt: "¿Querés involucrarte más?",
+    involveLink: "Sumate acá",
   },
   reportForm: {
     title: "Reportar",
@@ -288,7 +291,7 @@ export const messages = {
     limitsBullets: [
       "Después de enviar un reporte, el formulario espera {cooldown} minutos antes de dejarte enviar otro desde el mismo teléfono.",
       "Sin número de unidad o placa, se acepta un solo reporte cada {noUnit} minutos desde la misma conexión. Si ponés el número, este límite no aplica.",
-      "Si en los últimos {duplicate} minutos ya se reportó lo mismo en esa ruta (la misma unidad con los mismos problemas, o cualquier reporte sin número de unidad), el nuevo no se suma: ya está contado.",
+      "Si desde la misma conexión enviás el mismo reporte otra vez (misma ruta, misma unidad y mismos problemas) en menos de {duplicate} minutos, cuenta una sola vez. Los reportes de otras personas nunca bloquean el tuyo.",
       "Como máximo se aceptan {max} reportes cada {window} minutos desde la misma conexión.",
       "Después de enviar, tenés {undo} segundos para deshacer el reporte.",
     ],

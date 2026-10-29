@@ -61,6 +61,16 @@ export async function HomePageContent({
             </Button>
           </div>
 
+          <p className="text-center text-sm text-muted" data-testid="home-involve">
+            {dictionary.home.involvePrompt}{" "}
+            <Link
+              className="font-semibold text-foreground underline decoration-border underline-offset-2 transition-colors hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              href={`/${lang}/colaborar`}
+            >
+              {dictionary.home.involveLink}
+            </Link>
+          </p>
+
           <Suspense fallback={<HomeReportsSkeleton dictionary={dictionary} />}>
             <HomeReports dictionary={dictionary} includeDemo={includeDemo} locale={lang} />
           </Suspense>

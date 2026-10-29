@@ -90,20 +90,38 @@ describe("reports-repository (memory store)", () => {
       expect(result.report.problems).toEqual(["cucarachas", "hacinados"]);
     });
 
-    describe("no-unit duplicate suppression (route-scoped, no request fingerprint required)", () => {
+    describe("duplicate suppression (scoped to the sender's origin)", () => {
+      const rider = { ip: "203.0.113.40" };
+      const otherRider = { ip: "203.0.113.41" };
+      beforeEach(() => {
+        vi.stubEnv("TERMO_ABUSE_SECRET", "test-abuse-secret");
+      });
+
+      it("never lets one rider's report block another rider's identical report", async () => {
+        const now = new Date("2026-10-05T12:00:00Z");
+        const same = input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas"] });
+        expect((await createReportForRequest(same, rider, now)).ok).toBe(true);
+        expect((await createReportForRequest(same, otherRider, new Date(now.getTime() + 60_000))).ok).toBe(true);
+        expect((await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), rider, now)).ok).toBe(true);
+        expect((await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), otherRider, now)).ok).toBe(true);
+      });
+
+      it("skips the duplicate check when there is no origin to scope it to", async () => {
+        const now = new Date("2026-10-05T12:00:00Z");
+        const same = input({ route: "CEDROS", unit: "9", problems: ["acoso"] });
+        expect((await createReportForRequest(same, null, now)).ok).toBe(true);
+        expect((await createReportForRequest(same, null, now)).ok).toBe(true);
+      });
+
       it("suppresses a second no-unit report on the same route within the window regardless of which problems were reported", async () => {
-        // Deliberate product policy, confirmed with the product owner: a
-        // no-unit report is treated as "the same complaint" about a route
-        // for a short window, even if the reported problems differ, because
-        // there is no unit to distinguish separate buses.
         const first = await createReportForRequest(
           input({ route: "SAN_RAMON", unit: null, problems: ["hacinados"] }),
-          null,
+          rider,
           new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           input({ route: "SAN_RAMON", unit: null, problems: ["acoso", "cucarachas"] }),
-          null,
+          rider,
           new Date("2026-10-05T12:01:00Z"),
         );
 
@@ -111,28 +129,26 @@ describe("reports-repository (memory store)", () => {
         expect(second).toEqual({ ok: false, reason: "duplicate" });
       });
 
-      it("does not suppress no-unit reports made on a different route", async () => {
+      it("does not suppress the same unit and problems reported on a different route", async () => {
         const now = new Date("2026-10-05T12:00:00Z");
-        const first = await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), null, now);
-        const second = await createReportForRequest(input({ route: "SABANILLA", unit: null }), null, now);
+        const first = await createReportForRequest(input({ route: "SAN_RAMON", unit: "12", problems: ["acoso"] }), rider, now);
+        const second = await createReportForRequest(input({ route: "SABANILLA", unit: "12", problems: ["acoso"] }), rider, now);
 
         expect(first.ok).toBe(true);
         expect(second.ok).toBe(true);
       });
-    });
 
-    describe("identified-unit duplicate suppression", () => {
       it("flags a repeat report for the same route, unit, and full problem set", async () => {
         const first = await createReportForRequest(
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas", "acoso"] }),
-          null,
+          rider,
           new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           // Same problems, different submission order: the comparison is
           // order-insensitive.
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["acoso", "cucarachas"] }),
-          null,
+          rider,
           new Date("2026-10-05T12:02:00Z"),
         );
 
@@ -143,12 +159,12 @@ describe("reports-repository (memory store)", () => {
       it("allows a second report for the same route and unit when the problem set differs", async () => {
         const first = await createReportForRequest(
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas"] }),
-          null,
+          rider,
           new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           input({ route: "VARGAS_ARAYA", unit: "24", problems: ["acoso"] }),
-          null,
+          rider,
           new Date("2026-10-05T12:02:00Z"),
         );
 
