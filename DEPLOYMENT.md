@@ -13,7 +13,7 @@ Use a Vercel Preview deployment first when validating a change before promoting 
    - `NEXT_PUBLIC_SITE_URL` (the deployed domain)
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `TERMO_ABUSE_SECRET`
-4. Apply `supabase/migrations/0001_initial.sql` to the Supabase project. It is the only migration — the schema was rebuilt from scratch for the bus-report model rather than patched forward from the Metro de Madrid original. See `supabase/archived_migrations/` for the preserved history.
+4. Apply `supabase/migrations/0001_initial.sql` to the Supabase project. It is the only migration (squashed before launch). If the database already has an older schema, run `supabase/reset.sql` first — it deletes everything in `public`. See `supabase/archived_migrations/` for the preserved history.
 5. Seed non-production data with `supabase/seed.sql` if the environment should have dashboard data immediately.
 6. Deploy and verify:
    - `npm run lint`

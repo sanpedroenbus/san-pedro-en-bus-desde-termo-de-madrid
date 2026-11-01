@@ -40,7 +40,7 @@ supabase/migrations/*.sql
 supabase/seed.sql
 ```
 
-The schema was rebuilt from scratch for the bus-report model — `supabase/migrations/0001_initial.sql` is the only migration to apply. Earlier Metro de Madrid migrations are preserved for history under `supabase/archived_migrations/` and should not be applied.
+`supabase/migrations/0001_initial.sql` is the only migration to apply. On a database that already has an older schema, run `supabase/reset.sql` first (it deletes everything in `public`). Earlier migrations are preserved for history under `supabase/archived_migrations/` and should not be applied.
 
 Dashboard and unit-inventory reads run only on the server with the service-role key. A unit identifier (bus unit number or licence plate) is stored normalized to uppercase alphanumeric, 1-10 characters, for example `51` or `SJB1234`.
 

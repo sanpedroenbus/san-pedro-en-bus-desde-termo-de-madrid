@@ -1,6 +1,7 @@
 -- 0001_initial.sql
--- Fresh schema for San Pedro en Bus. Replaces the archived Metro de Madrid
--- schema entirely (see supabase/archived_migrations/2026_madrid_termo/).
+-- Fresh schema for San Pedro en Bus, squashed before launch (2026-10-31) from
+-- the incremental migrations archived in supabase/archived_migrations/2026_bus_v1/.
+-- Run supabase/reset.sql first on a database that has any older schema.
 --
 -- A report is: a route, an optional bus unit (unit number or licence plate),
 -- and one or more reported problems. There is no single "state" or severity
@@ -22,7 +23,8 @@ create table public.reports (
       'VARGAS_ARAYA',
       'BARRIO_PINTO',
       'CEDROS',
-      'LA_EUROPA'
+      'LA_EUROPA',
+      'CARMIOL'
     )
   ),
   unit text check (unit is null or unit ~ '^[A-Z0-9]{1,10}$'),
@@ -30,21 +32,18 @@ create table public.reports (
     cardinality(problems) > 0
     and problems <@ array[
       'no_horario_claro',
-      'no_paso_google_maps',
       'duro_toda_la_vida',
+      'horario_sin_servicio',
       'no_hizo_parada',
-      'paro_otro_lado',
+      'parada_inadecuada',
       'insegura_parada',
       'hacinados',
-      'chofer_trato_mal',
-      'pasajero_violento',
-      'cucarachas',
       'olia_mal_sucio',
-      'volumen_molesto',
-      'pasajero_sin_audifonos',
-      'acoso',
+      'sin_accesibilidad',
       'conduccion_temeraria',
-      'horario_sin_servicio'
+      'acoso',
+      'volumen_molesto',
+      'pasajero_sin_audifonos'
     ]::text[]
   ),
   -- Server timestamp only. Never trust a client-supplied creation time.
@@ -81,7 +80,8 @@ create table public.units (
       'VARGAS_ARAYA',
       'BARRIO_PINTO',
       'CEDROS',
-      'LA_EUROPA'
+      'LA_EUROPA',
+      'CARMIOL'
     )
   ),
   active boolean not null default true,
@@ -134,7 +134,8 @@ create or replace function public.create_report(
   input_now timestamptz,
   input_rate_limit_start timestamptz,
   input_rate_limit_max int,
-  input_duplicate_window_start timestamptz
+  input_duplicate_window_start timestamptz,
+  input_no_unit_window_start timestamptz
 )
 returns table (
   ok boolean,
@@ -166,13 +167,28 @@ begin
       return query select false, 'rate_limited'::text, null::uuid, null::text, null::text, null::text[], null::timestamptz, null::timestamptz;
       return;
     end if;
+
+    -- One no-unit report per origin across all routes per window (PRODUCT.md).
+    if input_unit is null and exists (
+      select 1
+      from public.reports r
+      where r.abuse_key = input_abuse_key
+        and r.unit is null
+        and r.hidden_at is null
+        and r.created_at >= input_no_unit_window_start
+    ) then
+      return query select false, 'duplicate'::text, null::uuid, null::text, null::text, null::text[], null::timestamptz, null::timestamptz;
+      return;
+    end if;
   end if;
 
-  -- Duplicate: same route, same unit (or both without a unit) with the same
-  -- problems, within the recent duplicate window.
+  -- Duplicate: the same origin sending the same route, same unit (or both
+  -- without a unit) with the same problems, within the recent duplicate window.
+  -- Scoped to the abuse key so one rider's report never blocks another's.
   select r.id into v_duplicate_id
   from public.reports r
-  where r.route = input_route
+  where r.abuse_key = input_abuse_key
+    and r.route = input_route
     and r.created_at >= input_duplicate_window_start
     and r.hidden_at is null
     and (
@@ -197,9 +213,9 @@ begin
 end;
 $$;
 
-revoke all on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz) from public;
-revoke execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz) from anon, authenticated;
-grant execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz) to service_role;
+revoke all on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) from public;
+revoke execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) from anon, authenticated;
+grant execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- dashboard_home_snapshot: recent report count + most recent N reports.
@@ -246,3 +262,36 @@ $$;
 revoke all on function public.dashboard_home_snapshot(timestamptz, timestamptz, int) from public;
 revoke execute on function public.dashboard_home_snapshot(timestamptz, timestamptz, int) from anon, authenticated;
 grant execute on function public.dashboard_home_snapshot(timestamptz, timestamptz, int) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- collaborators
+-- ---------------------------------------------------------------------------
+
+-- Opt-in contact list for riders who want to help map stops or test bus
+-- tracking. This is personal data: the app only ever writes to it through the
+-- service role, and nobody can read it except project admins (dashboard /
+-- service role). RLS is on with no policies, and anon/authenticated have no
+-- grants, so the public API can neither read nor write it.
+
+create table public.collaborators (
+  id uuid primary key default gen_random_uuid(),
+  email text check (email is null or (length(email) <= 254 and email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')),
+  whatsapp text check (whatsapp is null or whatsapp ~ '^\+[0-9]{8,15}$'),
+  interests text[] not null check (
+    cardinality(interests) > 0
+    and interests <@ array['mapeo', 'seguimiento', 'canton']::text[]
+  ),
+  consented_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  -- Private abuse-control key, same derivation as reports. Never exposed.
+  abuse_key text,
+  check (email is not null or whatsapp is not null)
+);
+
+create unique index collaborators_email_key on public.collaborators (email) where email is not null;
+create unique index collaborators_whatsapp_key on public.collaborators (whatsapp) where whatsapp is not null;
+create index collaborators_abuse_idx on public.collaborators (abuse_key, created_at desc) where abuse_key is not null;
+
+alter table public.collaborators enable row level security;
+revoke all on public.collaborators from anon, authenticated;
+grant all on public.collaborators to service_role;

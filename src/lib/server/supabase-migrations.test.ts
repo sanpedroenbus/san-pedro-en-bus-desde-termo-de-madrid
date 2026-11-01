@@ -16,32 +16,26 @@ const migrationPath = join(root, "supabase/migrations/0001_initial.sql");
 const migration = readFileSync(migrationPath, "utf8");
 
 describe("Supabase migration: 0001_initial.sql", () => {
-  it("is the base of the active migrations (old Metro de Madrid migrations are archived, not applied)", () => {
+  it("is the only active migration (the pre-launch incremental ones are archived, not applied)", () => {
     const activeMigrations = readdirSync(join(root, "supabase/migrations")).filter((file) => file.endsWith(".sql"));
-    expect(activeMigrations).toEqual([
-      "0001_initial.sql",
-      "0002_create_report_no_unit_origin_window.sql",
-      "0003_retire_no_paso_google_maps.sql",
-      "0004_ramp_problem_and_unit_normalization.sql",
-      "0005_collaborators.sql",
-      "0006_catalogue_revision_and_carmiol.sql",
-      "0007_scope_duplicates_to_origin.sql",
-      "0008_merge_problems.sql",
-      "0009_collaborator_canton_interest.sql",
-    ]);
+    expect(activeMigrations).toEqual(["0001_initial.sql"]);
   });
 
-  it("defines a reports table with a route CHECK constraint listing only real routes (0006 adds the newer ones)", () => {
+  it("allows exactly the app's routes on both reports and units", () => {
     const routeCheckMatch = migration.match(/route text not null check \(\s*route in \(([\s\S]*?)\)\s*\),/);
     expect(routeCheckMatch).not.toBeNull();
     const listedRoutes = routeCheckMatch![1].match(/'([A-Z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
 
-    expect(listedRoutes.length).toBeGreaterThan(0);
-    for (const route of listedRoutes) expect(ROUTES).toContain(route);
+    expect(listedRoutes).toEqual([...ROUTES]);
+    const unitsTable = migration.slice(migration.indexOf("create table public.units"));
+    const unitRoutes = unitsTable.match(/route in \(([\s\S]*?)\)/)?.[1].match(/'([A-Z_]+)'/g)?.map((value) => value.replaceAll("'", ""));
+    expect(unitRoutes).toEqual([...ROUTES]);
   });
 
-  it("requires at least one problem", () => {
+  it("requires at least one problem and allows exactly the app's catalogue", () => {
     expect(migration).toContain("cardinality(problems) > 0");
+    const listed = migration.match(/problems <@ array\[([\s\S]*?)\]::text\[\]/)?.[1].match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", ""));
+    expect(listed).toEqual([...PROBLEMS]);
   });
 
   it("accepts short numeric bus unit codes as well as plate-like codes, not the old Metro car regex", () => {
@@ -112,7 +106,22 @@ describe("Supabase migration: 0001_initial.sql", () => {
     expect(rateLimitIndex).toBeLessThan(duplicateIndex);
   });
 
-  it("suppresses duplicates by matching route + unit + exact problem set, or route + no unit at all", () => {
+  it("limits no-unit reports per origin across routes, after rate limiting and before route duplicates", () => {
+    const rateLimitIndex = migration.indexOf("v_recent_count >= input_rate_limit_max");
+    const originWindowIndex = migration.indexOf("r.created_at >= input_no_unit_window_start");
+    const duplicateIndex = migration.indexOf("v_duplicate_id is not null");
+    expect(originWindowIndex).toBeGreaterThan(rateLimitIndex);
+    expect(duplicateIndex).toBeGreaterThan(originWindowIndex);
+  });
+
+  it("defines only the current create_report signature", () => {
+    expect(migration.match(/create or replace function public\.create_report\(/g)).toHaveLength(1);
+    expect(migration).toContain("input_no_unit_window_start timestamptz\n)");
+  });
+
+  it("suppresses duplicates from the same origin only: route + unit + exact problem set, or route + no unit at all", () => {
+    const duplicateCheck = migration.slice(migration.indexOf("select r.id into v_duplicate_id"));
+    expect(duplicateCheck).toMatch(/^select r\.id into v_duplicate_id\s+from public\.reports r\s+where r\.abuse_key = input_abuse_key/);
     expect(migration).toContain("input_unit is null and r.unit is null");
     expect(migration).toContain("input_unit is not null and r.unit = input_unit and r.problems = input_problems");
     // Hidden reports never count as a duplicate match.
@@ -136,147 +145,32 @@ describe("Supabase migration: 0001_initial.sql", () => {
   });
 });
 
-describe("Supabase migration: 0002_create_report_no_unit_origin_window.sql", () => {
-  const migration0002 = readFileSync(join(root, "supabase/migrations/0002_create_report_no_unit_origin_window.sql"), "utf8");
-  const signature = "text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz";
-
-  it("adds the new signature alongside the old one so applying it can't break the deployed app", () => {
-    expect(migration0002).not.toContain("drop function");
-    expect(migration0002).toContain("input_no_unit_window_start timestamptz\n)");
-  });
-
-  it("limits no-unit reports per abuse key across all routes, after rate limiting and before route duplicates", () => {
-    const rateLimitIndex = migration0002.indexOf("v_recent_count >= input_rate_limit_max");
-    const originWindowIndex = migration0002.indexOf("r.created_at >= input_no_unit_window_start");
-    const duplicateIndex = migration0002.indexOf("v_duplicate_id is not null");
-    expect(rateLimitIndex).toBeGreaterThan(-1);
-    expect(originWindowIndex).toBeGreaterThan(rateLimitIndex);
-    expect(duplicateIndex).toBeGreaterThan(originWindowIndex);
-    expect(migration0002).toContain("input_unit is null and exists");
-    expect(migration0002).toContain("r.abuse_key = input_abuse_key");
-  });
-
-  it("keeps create_report restricted to the service role", () => {
-    expect(migration0002).toContain(`revoke all on function public.create_report(${signature}) from public;`);
-    expect(migration0002).toContain(`revoke execute on function public.create_report(${signature}) from anon, authenticated;`);
-    expect(migration0002).toContain(`grant execute on function public.create_report(${signature}) to service_role;`);
-  });
-});
-
-describe("Supabase migration: 0003_retire_no_paso_google_maps.sql", () => {
-  const migration0003 = readFileSync(join(root, "supabase/migrations/0003_retire_no_paso_google_maps.sql"), "utf8");
-
-  it("is no longer part of the app's problem catalogue", () => {
-    expect(PROBLEMS).not.toContain("no_paso_google_maps");
-  });
-
-  it("hides (never deletes) reports whose only problem was the retired one, and strips it from the rest", () => {
-    expect(migration0003).not.toMatch(/delete from/i);
-    expect(migration0003).toContain("where problems = array['no_paso_google_maps']::text[]");
-    expect(migration0003).toContain("hidden_reason = coalesce(hidden_reason, 'problem_retired')");
-    expect(migration0003).toContain("set problems = array_remove(problems, 'no_paso_google_maps')");
-    // Stripping must skip single-problem rows, or they'd violate cardinality(problems) > 0.
-    expect(migration0003).toContain("and cardinality(problems) > 1");
-  });
-});
-
-describe("Supabase migration: 0004_ramp_problem_and_unit_normalization.sql", () => {
-  const migration0004 = readFileSync(join(root, "supabase/migrations/0004_ramp_problem_and_unit_normalization.sql"), "utf8");
-
-  it("replaces the problems constraint, adding the ramp problem and keeping the retired one", () => {
-    expect(migration0004).toContain("alter table public.reports drop constraint reports_problems_check;");
-    expect(migration0004).toContain("cardinality(problems) > 0");
-    const listed = migration0004.match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
-    expect(listed).toContain("rampa_no_funciono");
-    expect(listed).toContain("no_paso_google_maps");
-  });
-
-  it("normalizes stored plates and unit numbers the same way normalizeUnitCode does", () => {
-    expect(migration0004).toContain("set unit = 'SJB' || ltrim(regexp_replace(unit, '^SJB', ''), '0')");
-    expect(migration0004).toContain("between 4 and 6");
-    expect(migration0004).toContain("set unit = ltrim(unit, '0')");
-  });
-});
-
-describe("Supabase migration: 0005_collaborators.sql", () => {
-  const migration0005 = readFileSync(join(root, "supabase/migrations/0005_collaborators.sql"), "utf8");
+describe("Supabase migration 0001: collaborators", () => {
+  const collaborators = migration.slice(migration.indexOf("create table public.collaborators"));
 
   it("keeps contact data private: RLS on, no policies, no anon/authenticated grants", () => {
-    expect(migration0005).toContain("alter table public.collaborators enable row level security;");
-    expect(migration0005).toContain("revoke all on public.collaborators from anon, authenticated;");
-    expect(migration0005).not.toMatch(/create policy/i);
-    expect(migration0005).not.toMatch(/grant [a-z, ]+ on public\.collaborators to (anon|authenticated)/i);
+    expect(collaborators).toContain("alter table public.collaborators enable row level security;");
+    expect(collaborators).toContain("revoke all on public.collaborators from anon, authenticated;");
+    expect(collaborators).not.toMatch(/create policy/i);
+    expect(collaborators).not.toMatch(/grant [a-z, ]+ on public\.collaborators to (anon|authenticated)/i);
   });
 
   it("requires a contact, a known interest and a consent time, and dedupes contacts", () => {
-    expect(migration0005).toContain("check (email is not null or whatsapp is not null)");
-    expect(migration0005).toContain("interests <@ array['mapeo', 'seguimiento']::text[]");
-    expect(migration0005).toContain("consented_at timestamptz not null");
-    expect(migration0005).toContain("create unique index collaborators_email_key");
-    expect(migration0005).toContain("create unique index collaborators_whatsapp_key");
+    const interests = collaborators.match(/interests <@ array\[([^\]]*)\]/)?.[1].match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", ""));
+    expect(interests).toEqual([...COLLABORATION_INTERESTS]);
+    expect(collaborators).toContain("check (email is not null or whatsapp is not null)");
+    expect(collaborators).toContain("consented_at timestamptz not null");
+    expect(collaborators).toContain("create unique index collaborators_email_key");
+    expect(collaborators).toContain("create unique index collaborators_whatsapp_key");
   });
 });
 
-describe("Supabase migration: 0006_catalogue_revision_and_carmiol.sql", () => {
-  const migration0006 = readFileSync(join(root, "supabase/migrations/0006_catalogue_revision_and_carmiol.sql"), "utf8");
-  const [problemsSql, reportsRouteSql, unitsRouteSql] = migration0006.split(/alter table public\.\w+ drop constraint/).slice(1);
-  const ids = (sql: string) => sql.match(/'([A-Za-z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
+describe("supabase/reset.sql", () => {
+  const reset = readFileSync(join(root, "supabase/reset.sql"), "utf8");
 
-  it("allows every current problem plus the retired and merged ones (0008), and nothing else", () => {
-    const retiredOrMerged = ["no_paso_google_maps", "nunca_paso", "paro_otro_lado", "cucarachas", "rampa_no_funciono", "discriminacion", "chofer_trato_mal", "pasajero_violento"];
-    expect(new Set(ids(problemsSql))).toEqual(new Set([...PROBLEMS, ...retiredOrMerged]));
-  });
-
-  it("allows exactly the current routes on both reports and units", () => {
-    expect(reportsRouteSql).toContain("reports_route_check");
-    expect(unitsRouteSql).toContain("units_route_check");
-    expect(new Set(ids(reportsRouteSql))).toEqual(new Set(ROUTES));
-    expect(new Set(ids(unitsRouteSql))).toEqual(new Set(ROUTES));
-  });
-});
-
-describe("Supabase migration: 0007_scope_duplicates_to_origin.sql", () => {
-  const migration0007 = readFileSync(join(root, "supabase/migrations/0007_scope_duplicates_to_origin.sql"), "utf8");
-
-  it("only matches duplicates from the same origin, keeping the 0002 signature and grants", () => {
-    const duplicateCheck = migration0007.slice(migration0007.indexOf("select r.id into v_duplicate_id"));
-    expect(duplicateCheck).toMatch(/^select r\.id into v_duplicate_id\s+from public\.reports r\s+where r\.abuse_key = input_abuse_key/);
-    expect(migration0007).toContain("input_no_unit_window_start timestamptz\n)");
-    expect(migration0007).toContain(
-      "grant execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) to service_role;",
-    );
-    expect(migration0007).toContain("revoke execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) from anon, authenticated;");
-  });
-});
-
-describe("Supabase migration: 0008_merge_problems.sql", () => {
-  const migration0008 = readFileSync(join(root, "supabase/migrations/0008_merge_problems.sql"), "utf8");
-
-  it("folds every merged id into a problem still in the catalogue", () => {
-    const merges = [...migration0008.matchAll(/when '([a-z_]+)' then '([a-z_]+)'/g)];
-    expect(merges).toHaveLength(6);
-    for (const [, from, to] of merges) {
-      expect(PROBLEMS).not.toContain(from);
-      expect(PROBLEMS).toContain(to);
-    }
-  });
-
-  it("rebuilds arrays distinct and sorted, and hides (never deletes) reports left only with the retired id", () => {
-    expect(migration0008).not.toMatch(/delete from/i);
-    expect(migration0008).toContain("select distinct case problem");
-    expect(migration0008).toContain("order by 1");
-    expect(migration0008).toContain("where problems = array['nunca_paso']::text[];");
-    expect(migration0008).toContain("and cardinality(problems) > 1");
-    expect(PROBLEMS).not.toContain("nunca_paso");
-  });
-});
-
-describe("Supabase migration: 0009_collaborator_canton_interest.sql", () => {
-  const migration0009 = readFileSync(join(root, "supabase/migrations/0009_collaborator_canton_interest.sql"), "utf8");
-
-  it("allows exactly the app's collaboration interests", () => {
-    const listed = migration0009.match(/array\[([^\]]*)\]/)?.[1].match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", ""));
-    expect(listed).toEqual([...COLLABORATION_INTERESTS]);
-    expect(migration0009).toContain("drop constraint collaborators_interests_check");
+  it("only drops objects in the public schema, never extension-owned ones", () => {
+    expect(reset.match(/n\.nspname = 'public'/g)).toHaveLength(2);
+    expect(reset.match(/d\.deptype = 'e'/g)).toHaveLength(2);
+    expect(reset).not.toMatch(/drop schema/i);
   });
 });

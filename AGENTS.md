@@ -52,7 +52,7 @@ If you are picking up a rebuild task, also read `makeover.md` in the repo root �
 ## Data And Backend Rules
 
 - Use Supabase Postgres from the beginning, including local development and seed data. When no Supabase credentials are configured, the app falls back to an in-memory seed store (`src/lib/server/seed-data.ts`) for local/demo use — this fallback must never be the silent behaviour in a real production deployment (see `report-security.ts`'s `shouldRequirePersistentStore()`).
-- Schema changes must be represented as migrations under `supabase/migrations/`. The schema was squashed to a single fresh `0001_initial.sql` during the bus-model rebuild; older Metro de Madrid migrations are preserved for history under `supabase/archived_migrations/`, not deleted.
+- Schema changes must be represented as migrations under `supabase/migrations/`. The schema was squashed again to a single fresh `0001_initial.sql` before launch (2026-10-31); `supabase/reset.sql` wipes the `public` schema so it can be rebuilt. Earlier migrations (Metro de Madrid and the pre-launch bus ones) are preserved for history under `supabase/archived_migrations/`, not deleted. Once there is real production data, schema changes go forward as new numbered migrations again — no more squashing.
 - Enable RLS on exposed tables and keep public write access constrained through server-side validation/rate limiting.
 - Store server timestamps for reports. Do not trust client timestamps for report creation.
 - Rate limiting and duplicate suppression use short-lived private abuse keys only.
