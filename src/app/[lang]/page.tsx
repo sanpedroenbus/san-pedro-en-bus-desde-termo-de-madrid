@@ -180,7 +180,7 @@ function HomeReportsSkeleton({ dictionary }: { dictionary: Awaited<ReturnType<ty
 }
 
 function TrainSilhouette() {
-  return <span aria-hidden="true" className="home-train-silhouette mx-auto mb-1 aspect-[900/369] w-64 text-muted opacity-60" />;
+  return <span aria-hidden="true" className="home-train-silhouette mx-auto mb-1 aspect-[900/369] w-full max-w-64 text-muted opacity-60" />;
 }
 
 function getTopRecentRoutes(reports: Report[]) {

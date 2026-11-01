@@ -146,6 +146,11 @@ body {
   p {
     text-wrap: pretty;
   }
+
+  /* Fieldsets default to min-content width, which overflows narrow viewports (large Android display size). */
+  fieldset {
+    min-inline-size: 0;
+  }
 }
 
 /* Invisible tap-area extension for small controls; ::before so it doesn't clash with ::after effects. */

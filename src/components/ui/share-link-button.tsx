@@ -4,10 +4,15 @@ import { Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-// Shares the current page: the native share sheet on phones, clipboard elsewhere.
+// Every share points at the home page of the current locale, wherever the button lives.
+export function getHomeShareUrl() {
+  return `${window.location.origin}/${window.location.pathname.split("/")[1]}`;
+}
+
+// Shares the home page: the native share sheet on phones, clipboard elsewhere.
 export function ShareLinkButton({ label, copiedLabel, title }: { label: string; copiedLabel: string; title: string }) {
   async function share() {
-    const url = window.location.href;
+    const url = getHomeShareUrl();
     try {
       if (navigator.share) {
         await navigator.share({ title, url });

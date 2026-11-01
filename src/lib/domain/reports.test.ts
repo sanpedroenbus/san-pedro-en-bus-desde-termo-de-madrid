@@ -8,16 +8,16 @@ describe("reportMatchesProblems", () => {
   });
 
   it("matches a report that carries any of the selected problems", () => {
-    expect(reportMatchesProblems({ problems: ["hacinados", "cucarachas"] }, ["cucarachas"])).toBe(true);
-    expect(reportMatchesProblems({ problems: ["cucarachas"] }, ["hacinados", "cucarachas"])).toBe(true);
+    expect(reportMatchesProblems({ problems: ["hacinados", "sin_accesibilidad"] }, ["sin_accesibilidad"])).toBe(true);
+    expect(reportMatchesProblems({ problems: ["sin_accesibilidad"] }, ["hacinados", "sin_accesibilidad"])).toBe(true);
   });
 
   it("does not match a report with none of the selected problems", () => {
-    expect(reportMatchesProblems({ problems: ["hacinados"] }, ["cucarachas"])).toBe(false);
+    expect(reportMatchesProblems({ problems: ["hacinados"] }, ["sin_accesibilidad"])).toBe(false);
   });
 
   it("does not require the report to carry every selected problem", () => {
-    expect(reportMatchesProblems({ problems: ["hacinados"] }, ["hacinados", "cucarachas"])).toBe(true);
+    expect(reportMatchesProblems({ problems: ["hacinados"] }, ["hacinados", "sin_accesibilidad"])).toBe(true);
   });
 });
 
@@ -89,10 +89,10 @@ describe("parseReportInput", () => {
   });
 
   it("accepts a report with multiple problems", () => {
-    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"] });
+    const parsed = parseReportInput({ route: "CEDROS", problems: ["hacinados", "acoso", "sin_accesibilidad"] });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.problems).toEqual(["hacinados", "acoso", "cucarachas"]);
+      expect(parsed.data.problems).toEqual(["hacinados", "acoso", "sin_accesibilidad"]);
     }
   });
 
@@ -192,7 +192,7 @@ describe("isDuplicateCandidate", () => {
 
   it("suppresses same-route no-unit reports regardless of which problems were reported", () => {
     const previous = previousReport({ unit: null, problems: ["hacinados"] });
-    const current = currentInput({ unit: null, problems: ["acoso", "cucarachas"] });
+    const current = currentInput({ unit: null, problems: ["acoso", "sin_accesibilidad"] });
     expect(isDuplicateCandidate(current, previous, now)).toBe(true);
   });
 

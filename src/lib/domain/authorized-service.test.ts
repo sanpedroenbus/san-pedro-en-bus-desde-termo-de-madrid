@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUTHORIZED_SERVICE, AUTHORIZED_SERVICE_SOURCE, DAY_TYPES, summarizeFrequencies } from "./authorized-service";
+import { AUTHORIZED_SERVICE, AUTHORIZED_SERVICE_SOURCE, DAY_TYPES, MOOVIT_FREQUENCIES, summarizeFrequencies } from "./authorized-service";
 import { ROUTES } from "./routes";
 
 describe("AUTHORIZED_SERVICE", () => {
@@ -37,12 +37,27 @@ describe("AUTHORIZED_SERVICE", () => {
 });
 
 describe("summarizeFrequencies", () => {
-  it("returns min, max and the plain mean over hours with service, both directions", () => {
-    expect(summarizeFrequencies({ fromSanJose: [10, 20, 10], toSanJose: [30, 30, 0] })).toEqual({
-      minMinutes: 10,
-      maxMinutes: 30,
-      averageMinutes: 20,
+  // Index 0 = 04:00, 8 = 12:00 (afternoon starts), 14 = 18:00 (night starts).
+  const hours = (values: Record<number, number>) => Array.from({ length: 19 }, (_, index) => values[index] ?? 0);
+
+  it("returns the plain mean per time of day over hours with service, both directions", () => {
+    expect(
+      summarizeFrequencies({ fromSanJose: hours({ 0: 10, 7: 20, 8: 15, 14: 30 }), toSanJose: hours({ 1: 30, 13: 15, 18: 60 }) }),
+    ).toEqual({ averageMinutes: { morning: 20, afternoon: 15, night: 45 }, hasGaps: true });
+  });
+
+  it("splits Granadilla's weekday service into morning, afternoon and night", () => {
+    expect(summarizeFrequencies(AUTHORIZED_SERVICE.GRANADILLA!.schedule.weekday)).toEqual({
+      averageMinutes: { morning: 10, afternoon: 9, night: 15 },
       hasGaps: false,
+    });
+  });
+
+  it("returns null for a time of day without service", () => {
+    expect(summarizeFrequencies({ fromSanJose: hours({ 0: 60 }), toSanJose: hours({}) })?.averageMinutes).toEqual({
+      morning: 60,
+      afternoon: null,
+      night: null,
     });
   });
 
@@ -54,17 +69,22 @@ describe("summarizeFrequencies", () => {
   });
 
   it("rounds the mean to whole minutes", () => {
-    expect(summarizeFrequencies({ fromSanJose: [10, 15], toSanJose: [15] })?.averageMinutes).toBe(13);
+    expect(summarizeFrequencies({ fromSanJose: [10, 15], toSanJose: [15] })?.averageMinutes.morning).toBe(13);
   });
 
   it("returns null when there is no service or no schedule", () => {
     expect(summarizeFrequencies({ fromSanJose: [0, 0], toSanJose: [0] })).toBeNull();
     expect(summarizeFrequencies(undefined)).toBeNull();
   });
+});
 
-  it("summarizes Granadilla's weekday service as every 6-30 min", () => {
-    const summary = summarizeFrequencies(AUTHORIZED_SERVICE.GRANADILLA!.schedule.weekday);
-    expect(summary?.minMinutes).toBe(6);
-    expect(summary?.maxMinutes).toBe(30);
+describe("MOOVIT_FREQUENCIES", () => {
+  it("only fills routes the CTP document leaves out, with min <= max", () => {
+    for (const [route, { url, frequencies: days }] of Object.entries(MOOVIT_FREQUENCIES)) {
+      expect(url).toMatch(/^https:\/\/moovitapp\.com\//);
+      expect(ROUTES).toContain(route);
+      expect(AUTHORIZED_SERVICE[route as keyof typeof AUTHORIZED_SERVICE]).toBeUndefined();
+      for (const [min, max] of Object.values(days)) expect(min).toBeLessThanOrEqual(max);
+    }
   });
 });

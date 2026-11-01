@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Internal research for marketing skills (never publish)
+.claude/internal-audience-insights.md

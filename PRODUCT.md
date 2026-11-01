@@ -21,12 +21,12 @@ The product has two primary actions:
 
 A report is not one state chosen from a scale. It is **one or more problems** selected from a fixed catalogue, grouped into four categories:
 
-- Horarios: unclear schedule, took forever, no service at the needed hour, never came (had to walk or take an Uber/taxi).
-- Paradas: didn't stop, stopped somewhere else, stop structure in poor condition, unsafe at the stop.
-- Condición de la unidad: overcrowded, cockroaches, smelled bad or dirty, ramp didn't work, no accessibility or inclusion conditions.
-- Convivencia: reckless driving, driver or passenger behaved violently or incorrectly, harassment, discrimination, disruptive volume, a passenger without headphones.
+- Horarios: unclear schedule (or not matching Google Maps), took forever, no service at the needed hour.
+- Paradas: didn't stop or stopped somewhere else, stop structure in poor condition, unsafe at the stop.
+- Condición de la unidad: overcrowded, smelled bad / dirty / cockroaches, no accessibility or inclusion conditions / ramp problems.
+- Convivencia: reckless driving, discrimination / harassment / violence (by the driver or a passenger), excessive volume, a passenger without headphones.
 
-A former "Seguridad" category was merged into Paradas and Convivencia; its problem ids are unchanged, so older reports keep counting.
+A former "Seguridad" category was merged into Paradas and Convivencia; its problem ids are unchanged, so older reports keep counting. Migration 0008 folded paired problems into one id each (stopped elsewhere, cockroaches, ramp, discrimination, driver/passenger violence) and retired "never came"; reports left with only that retired problem are hidden, not deleted.
 
 There is no severity scale, no weighted score, and no single number that claims to summarize "how bad" a route is. Counts are plain and unweighted: how many reports, on which route, about which problems, over which range. The Termo de Madrid original this app was forked from built a weighted heat index; that entire mechanism is intentionally absent here.
 
@@ -50,7 +50,7 @@ Public-facing name:
 
 ## Anti-references
 
-The product must not look affiliated with any transit company. The company that operates San Pedro's routes is never named in the product — copy refers to it generically as "la empresa de transportes." A small disclaimer is mandatory: `Proyecto ciudadano, no afiliado a ninguna empresa de transporte`.
+The product must not look affiliated with any transit company. The company that operates San Pedro's routes is never named in the product — copy refers to it generically as "la empresa de transportes." The one exception is /horarios, which names the operators only to cite the expiry dates in the public CTP permit it summarizes. A small disclaimer is mandatory: `Proyecto ciudadano, no afiliado a ninguna empresa de transporte`.
 
 The app should visibly credit its origin: it is built on top of Termo de Madrid, a citizen tool for reporting broken air conditioning on Metro de Madrid, with the original creator's blessing. That attribution (`nachoggodino`) stays prominent in the mission text and footer credit.
 
@@ -131,7 +131,7 @@ V1 routes:
 - /reportar: dedicated report screen with easy exit, route picker, grouped problem selector (multi-select, four categories), optional unit field, success feedback, and an outbound link to an external open-text form for anything that doesn't fit the fixed catalogue (see "Open-ended reports" below).
 - /explorar: dashboard with route, problem, and time-range filters, charts, unit/route detail.
 - /horarios: plain-language summary of the service conditions the regulator (CTP) authorizes for Ruta 50 — authorized frequencies per route and day type (range and plain mean, flagged where service has gaps), fleet size, ramps, permit validity — with a call to report and share, and the official record (`public/CTP-DT-DAC-CONS-1105-2026.pdf`) as source. It is context, never combined with report counts into a ratio or score (no reports-per-bus, no compliance percentage) unless this document is revised first.
-- /colaborar: opt-in for riders who want to be contacted about two future projects — mapping the real stops (no public stop list exists) and exploring rider-shared bus tracking for better arrival estimates. Collects an email and/or WhatsApp number, the chosen projects and explicit consent; nothing else. /horarios links to it with tracking preselected. This is an interest list only: no GPS, accounts or tracking exist in v1.
+- /colaborar: opt-in for riders who want to be contacted about future projects — mapping the real stops (no public stop list exists), exploring rider-shared bus tracking for better arrival estimates, and bringing the app to their own canton. Collects an email and/or WhatsApp number, the chosen projects and explicit consent; nothing else. /horarios links to it with tracking preselected. This is an interest list only: no GPS, accounts or tracking exist in v1.
 - /metodologia: lightweight methodology, privacy, abuse-control, and low-volume-data explanation, plus the affiliation disclaimer and origin-project attribution.
 
 V1 dashboard modules — the six questions the dashboard must answer, and nothing framed as a single score:

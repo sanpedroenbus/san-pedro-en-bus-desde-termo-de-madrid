@@ -35,11 +35,11 @@ describe("dashboard query parsing", () => {
   });
 
   it("parses and deduplicates a comma-separated list of valid problems", () => {
-    expect(parseSelectedProblems("hacinados,cucarachas,hacinados")).toEqual(["hacinados", "cucarachas"]);
+    expect(parseSelectedProblems("hacinados,sin_accesibilidad,hacinados")).toEqual(["hacinados", "sin_accesibilidad"]);
   });
 
   it("drops unknown problem ids while keeping the rest", () => {
-    expect(parseSelectedProblems("hacinados,not_a_problem,cucarachas")).toEqual(["hacinados", "cucarachas"]);
+    expect(parseSelectedProblems("hacinados,not_a_problem,sin_accesibilidad")).toEqual(["hacinados", "sin_accesibilidad"]);
   });
 
   it("returns an empty array for missing or empty problem input", () => {

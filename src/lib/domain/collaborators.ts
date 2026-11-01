@@ -3,7 +3,7 @@ import { z } from "zod";
 // Opt-in list of riders who want to be contacted to help with future work.
 // Contact data is private: write-only from the app, readable only by project
 // admins in Supabase (see migration 0005 and PRODUCT.md).
-export const COLLABORATION_INTERESTS = ["mapeo", "seguimiento"] as const;
+export const COLLABORATION_INTERESTS = ["mapeo", "seguimiento", "canton"] as const;
 export type CollaborationInterest = (typeof COLLABORATION_INTERESTS)[number];
 
 export const COLLABORATOR_RATE_LIMIT_MAX = 3;

@@ -104,12 +104,12 @@ describe("RecentReportRow", () => {
   }
 
   it("shows the route, the unit code, and problem chips instead of a heat-state badge", () => {
-    render(<RecentReportRow dictionary={esMessages} locale="es" report={report({ unit: "51", problems: ["hacinados", "cucarachas"] })} />);
+    render(<RecentReportRow dictionary={esMessages} locale="es" report={report({ unit: "51", problems: ["hacinados", "sin_accesibilidad"] })} />);
 
     expect(screen.getByText("CEDROS")).toBeInTheDocument();
     expect(screen.getByText("51")).toBeInTheDocument();
     expect(screen.getByText(getProblemLabel(esMessages, "hacinados"))).toBeInTheDocument();
-    expect(screen.getByText(getProblemLabel(esMessages, "cucarachas"))).toBeInTheDocument();
+    expect(screen.getByText(getProblemLabel(esMessages, "sin_accesibilidad"))).toBeInTheDocument();
     expect(screen.queryByText(/fresco|calor|infierno/i)).not.toBeInTheDocument();
   });
 
@@ -123,12 +123,12 @@ describe("RecentReportRow", () => {
       <RecentReportRow
         dictionary={esMessages}
         locale="es"
-        report={report({ problems: ["hacinados", "cucarachas", "acoso"] })}
+        report={report({ problems: ["hacinados", "sin_accesibilidad", "acoso"] })}
       />,
     );
 
     expect(screen.getByText(getProblemLabel(esMessages, "hacinados"))).toBeInTheDocument();
-    expect(screen.getByText(getProblemLabel(esMessages, "cucarachas"))).toBeInTheDocument();
+    expect(screen.getByText(getProblemLabel(esMessages, "sin_accesibilidad"))).toBeInTheDocument();
     expect(screen.queryByText(getProblemLabel(esMessages, "acoso"))).not.toBeInTheDocument();
     expect(screen.getByText("+1")).toBeInTheDocument();
   });

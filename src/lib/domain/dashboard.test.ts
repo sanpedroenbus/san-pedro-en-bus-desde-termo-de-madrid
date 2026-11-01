@@ -61,7 +61,7 @@ describe("buildDashboardData", () => {
 
   it("counts a single multi-problem report once per problem, without inflating the route total or reportsLastDay", () => {
     const data = buildDashboardData(
-      [report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"], createdAt: now })],
+      [report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "sin_accesibilidad"], createdAt: now })],
       now,
       "sevenDays",
     );
@@ -70,7 +70,7 @@ describe("buildDashboardData", () => {
     expect(cedros?.reports).toBe(1);
     expect(data.reportsLastDay).toBe(1);
 
-    for (const problem of ["hacinados", "acoso", "cucarachas"]) {
+    for (const problem of ["hacinados", "acoso", "sin_accesibilidad"]) {
       const summary = data.problemSummaries.find((entry) => entry.problem === problem);
       expect(summary?.reports).toBe(1);
     }
@@ -81,8 +81,8 @@ describe("buildDashboardData", () => {
   it("rolls problem summaries up into category summaries consistently, including the multi-problem case", () => {
     const data = buildDashboardData(
       [
-        // hacinados + cucarachas are both "condicion"; acoso is "convivencia".
-        report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "cucarachas"] }),
+        // hacinados + sin_accesibilidad are both "condicion"; acoso is "convivencia".
+        report({ id: "1", route: "CEDROS", problems: ["hacinados", "acoso", "sin_accesibilidad"] }),
         report({ id: "2", route: "SABANILLA", problems: ["olia_mal_sucio"] }),
       ],
       now,
@@ -94,7 +94,7 @@ describe("buildDashboardData", () => {
     expect(totalCategories).toBe(totalProblems);
 
     const condicion = data.categorySummaries.find((entry) => entry.category === "condicion");
-    expect(condicion?.reports).toBe(3); // hacinados + cucarachas + olia_mal_sucio
+    expect(condicion?.reports).toBe(3); // hacinados + sin_accesibilidad + olia_mal_sucio
     const convivencia = data.categorySummaries.find((entry) => entry.category === "convivencia");
     expect(convivencia?.reports).toBe(1);
   });
@@ -145,7 +145,7 @@ describe("buildDashboardData", () => {
       [
         report({ id: "1", route: "CEDROS", problems: ["hacinados"], unit: null }),
         report({ id: "2", route: "CEDROS", problems: ["acoso"], unit: null }),
-        report({ id: "3", route: "CEDROS", problems: ["cucarachas"], unit: "51" }),
+        report({ id: "3", route: "CEDROS", problems: ["sin_accesibilidad"], unit: "51" }),
       ],
       now,
       "sevenDays",
@@ -322,7 +322,7 @@ describe("buildUnitExplorerSelection", () => {
     const hidden = report({
       id: "3",
       route: "CEDROS",
-      problems: ["cucarachas"],
+      problems: ["sin_accesibilidad"],
       unit: "51",
       createdAt: now,
       hiddenAt: new Date("2026-07-05T11:00:00Z"),

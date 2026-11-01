@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { isProblem, PROBLEM_CATEGORIES, PROBLEM_CATEGORY, PROBLEMS } from "./problems";
 
 describe("problems", () => {
-  it("defines exactly twenty distinct problems", () => {
-    expect(PROBLEMS).toHaveLength(20);
-    expect(new Set(PROBLEMS).size).toBe(20);
+  it("defines exactly thirteen distinct problems", () => {
+    expect(PROBLEMS).toHaveLength(13);
+    expect(new Set(PROBLEMS).size).toBe(13);
   });
 
   it("validates known problems and rejects everything else", () => {

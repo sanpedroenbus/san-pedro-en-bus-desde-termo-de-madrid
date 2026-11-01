@@ -1,4 +1,4 @@
-import { Clock, FileText } from "lucide-react";
+import { ChevronDown, Clock, FileText, Moon, SquareArrowOutUpRight, Sun, Sunset, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,13 +10,19 @@ import {
   AUTHORIZED_SERVICE,
   AUTHORIZED_SERVICE_SOURCE,
   DAY_TYPES,
+  MOOVIT_FREQUENCIES,
+  MOOVIT_SOURCE,
   summarizeFrequencies,
+  TIMES_OF_DAY,
+  type DayType,
   type FrequencySummary,
+  type TimeOfDay,
 } from "@/lib/domain/authorized-service";
-import { ROUTE_LABELS, ROUTES } from "@/lib/domain/routes";
+import { ROUTE_LABELS, ROUTES, type Route } from "@/lib/domain/routes";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary, type Dictionary } from "@/lib/i18n/dictionaries";
 import { formatLongDate, formatNumber } from "@/lib/i18n/format";
+import { cn } from "@/lib/utils";
 
 export default async function SchedulesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -25,13 +31,15 @@ export default async function SchedulesPage({ params }: { params: Promise<{ lang
   const copy = dictionary.schedules;
   const source = AUTHORIZED_SERVICE_SOURCE;
   const routesWithSchedule = ROUTES.filter((route) => AUTHORIZED_SERVICE[route]);
-  const routesWithoutSchedule = ROUTES.filter((route) => !AUTHORIZED_SERVICE[route]);
+  const routesFromMoovit = ROUTES.filter((route) => !AUTHORIZED_SERVICE[route] && MOOVIT_FREQUENCIES[route]);
+  const routesWithoutSchedule = ROUTES.filter((route) => !AUTHORIZED_SERVICE[route] && !MOOVIT_FREQUENCIES[route]);
+  const routeList = (routes: Route[]) => routes.map((route) => ROUTE_LABELS[route]).join(", ");
   const rules = [
-    copy.rules.routes,
-    copy.rules.frequencies,
     copy.rules.fleet.replace("{count}", String(source.authorizedFleet)),
+    copy.rules.routes,
     copy.rules.ramps,
     copy.rules.validity.replace("{date}", formatLongDate(source.permitExpiresOn, lang)),
+    copy.rules.frequencies,
   ];
 
   return (
@@ -58,40 +66,58 @@ export default async function SchedulesPage({ params }: { params: Promise<{ lang
             titleAddon={<InfoTooltip label={copy.frequencyHelp}>{copy.frequencyHelp}</InfoTooltip>}
           >
             <p>{copy.frequencyIntro}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid items-start gap-3 sm:grid-cols-2">
               {routesWithSchedule.map((route) => {
                 const service = AUTHORIZED_SERVICE[route]!;
                 return (
-                  <section className="rounded-md border border-border bg-background p-3" data-testid="schedule-route" key={route}>
-                    <div className="flex items-center justify-between gap-2">
-                      <RouteBadge className="px-2 text-sm" route={route} />
-                      <span className="text-xs tabular-nums">
-                        {service.fleet === 1 ? copy.fleetOne : copy.fleetMany.replace("{count}", String(service.fleet))}
-                      </span>
-                    </div>
-                    <dl className="mt-3 flex flex-col gap-2">
-                      {DAY_TYPES.map((day) => (
-                        <div className="flex items-baseline justify-between gap-3" key={day}>
-                          <dt>{copy.dayTypes[day]}</dt>
-                          <dd className="text-right font-mono font-semibold tabular-nums text-foreground">
-                            <FrequencyValue copy={copy} lang={lang} summary={summarizeFrequencies(service.schedule[day])} />
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </section>
+                  <ScheduleCard
+                    aside={service.fleet === 1 ? copy.fleetOne : copy.fleetMany.replace("{count}", String(service.fleet))}
+                    copy={copy}
+                    key={route}
+                    renderDay={(day) => <FrequencyValue copy={copy} lang={lang} summary={summarizeFrequencies(service.schedule[day])} />}
+                    route={route}
+                  />
+                );
+              })}
+              {routesFromMoovit.map((route) => {
+                const { url, frequencies: days } = MOOVIT_FREQUENCIES[route]!;
+                return (
+                  <ScheduleCard
+                    aside={
+                      <a
+                        className="hit-slop inline-flex items-center gap-1 underline decoration-border underline-offset-2 transition-colors hover:text-foreground hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        href={url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {copy.moovitLabel}
+                        <SquareArrowOutUpRight aria-hidden="true" className="size-3" />
+                      </a>
+                    }
+                    copy={copy}
+                    key={route}
+                    renderDay={(day) => {
+                      const [min, max] = days[day];
+                      return min === max
+                        ? copy.single.replace("{min}", formatNumber(min, lang))
+                        : copy.range.replace("{min}", formatNumber(min, lang)).replace("{max}", formatNumber(max, lang));
+                    }}
+                    route={route}
+                  />
                 );
               })}
             </div>
-            {routesWithoutSchedule.length > 0 ? (
+            {routesFromMoovit.length > 0 ? (
               <p className="text-xs">
-                {copy.notInDocument.replace("{routes}", routesWithoutSchedule.map((route) => ROUTE_LABELS[route]).join(", "))}
+                {copy.moovitNote.replace("{routes}", routeList(routesFromMoovit)).replace("{date}", formatLongDate(MOOVIT_SOURCE.checkedOn, lang))}
               </p>
+            ) : null}
+            {routesWithoutSchedule.length > 0 ? (
+              <p className="text-xs">{copy.notInDocument.replace("{routes}", routeList(routesWithoutSchedule))}</p>
             ) : null}
           </Section>
 
           <Section id="reportar" title={copy.ctaTitle}>
-            <p>{copy.ctaBody}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button asChild>
                 <Link href={`/${lang}/reportar`}>{copy.ctaReport}</Link>
@@ -131,6 +157,63 @@ export default async function SchedulesPage({ params }: { params: Promise<{ lang
   );
 }
 
+const [WEEKDAY, ...WEEKEND] = DAY_TYPES;
+
+// Mon-Fri always visible; weekends behind a per-card toggle.
+function ScheduleCard({
+  aside,
+  copy,
+  renderDay,
+  route,
+}: {
+  aside: ReactNode;
+  copy: Dictionary["schedules"];
+  renderDay: (day: DayType) => ReactNode;
+  route: Route;
+}) {
+  return (
+    <section className="min-w-0 rounded-md border border-border bg-background p-3" data-testid="schedule-route">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <RouteBadge className="px-2 text-sm" route={route} />
+        <span className="text-xs tabular-nums">{aside}</span>
+      </div>
+      <DayRows className="mt-3" copy={copy} days={[WEEKDAY]} renderDay={renderDay} />
+      <details className="group mt-2">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-sm text-muted transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+          {copy.weekendToggle}
+          <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-muted transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none" />
+        </summary>
+        <DayRows copy={copy} days={WEEKEND} renderDay={renderDay} />
+      </details>
+    </section>
+  );
+}
+
+function DayRows({
+  className,
+  copy,
+  days,
+  renderDay,
+}: {
+  className?: string;
+  copy: Dictionary["schedules"];
+  days: readonly DayType[];
+  renderDay: (day: DayType) => ReactNode;
+}) {
+  return (
+    <dl className={cn("flex flex-col gap-2", className)}>
+      {days.map((day) => (
+        <div key={day}>
+          <dt>{copy.dayTypes[day]}</dt>
+          <dd className="font-mono font-semibold tabular-nums text-foreground">{renderDay(day)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const TIME_OF_DAY_ICONS: Record<TimeOfDay, LucideIcon> = { morning: Sun, afternoon: Sunset, night: Moon };
+
 function FrequencyValue({
   copy,
   lang,
@@ -141,18 +224,25 @@ function FrequencyValue({
   summary: FrequencySummary | null;
 }) {
   if (!summary) return <span className="font-sans font-normal text-muted">{copy.noService}</span>;
-  const range =
-    summary.minMinutes === summary.maxMinutes
-      ? copy.single.replace("{min}", formatNumber(summary.minMinutes, lang))
-      : copy.range.replace("{min}", formatNumber(summary.minMinutes, lang)).replace("{max}", formatNumber(summary.maxMinutes, lang));
   return (
     <>
-      {range}
-      {summary.minMinutes !== summary.maxMinutes ? (
-        <span className="block font-sans text-xs font-normal text-muted">
-          {copy.average.replace("{average}", formatNumber(summary.averageMinutes, lang))}
-        </span>
-      ) : null}
+      <span className="flex flex-wrap gap-x-4 gap-y-1">
+        {TIMES_OF_DAY.map((band) => {
+          const Icon = TIME_OF_DAY_ICONS[band];
+          const minutes = summary.averageMinutes[band];
+          return (
+            <span className="inline-flex items-center gap-1" key={band} title={copy.timesOfDay[band]}>
+              <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" />
+              <span className="sr-only">{copy.timesOfDay[band]}:</span>
+              {minutes === null ? (
+                <span className="font-sans font-normal text-muted">{copy.noService}</span>
+              ) : (
+                copy.minutes.replace("{minutes}", formatNumber(minutes, lang))
+              )}
+            </span>
+          );
+        })}
+      </span>
       {summary.hasGaps ? <span className="block font-sans text-xs font-normal text-muted">{copy.serviceGaps}</span> : null}
     </>
   );

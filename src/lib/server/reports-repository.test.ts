@@ -78,7 +78,7 @@ describe("reports-repository (memory store)", () => {
     it("dedupes and sorts problems before storing them (normalizeProblems)", async () => {
       const now = new Date("2026-10-05T12:00:00Z");
       const result = await createReportForRequest(
-        input({ route: "GRANADILLA", unit: "77", problems: ["hacinados", "cucarachas", "hacinados"] }),
+        input({ route: "GRANADILLA", unit: "77", problems: ["hacinados", "sin_accesibilidad", "hacinados"] }),
         null,
         now,
       );
@@ -87,7 +87,7 @@ describe("reports-repository (memory store)", () => {
       if (!result.ok) return;
       // Deduped (only one "hacinados") and sorted alphabetically, regardless
       // of submission order.
-      expect(result.report.problems).toEqual(["cucarachas", "hacinados"]);
+      expect(result.report.problems).toEqual(["hacinados", "sin_accesibilidad"]);
     });
 
     describe("duplicate suppression (scoped to the sender's origin)", () => {
@@ -99,7 +99,7 @@ describe("reports-repository (memory store)", () => {
 
       it("never lets one rider's report block another rider's identical report", async () => {
         const now = new Date("2026-10-05T12:00:00Z");
-        const same = input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas"] });
+        const same = input({ route: "VARGAS_ARAYA", unit: "24", problems: ["sin_accesibilidad"] });
         expect((await createReportForRequest(same, rider, now)).ok).toBe(true);
         expect((await createReportForRequest(same, otherRider, new Date(now.getTime() + 60_000))).ok).toBe(true);
         expect((await createReportForRequest(input({ route: "SAN_RAMON", unit: null }), rider, now)).ok).toBe(true);
@@ -120,7 +120,7 @@ describe("reports-repository (memory store)", () => {
           new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
-          input({ route: "SAN_RAMON", unit: null, problems: ["acoso", "cucarachas"] }),
+          input({ route: "SAN_RAMON", unit: null, problems: ["acoso", "sin_accesibilidad"] }),
           rider,
           new Date("2026-10-05T12:01:00Z"),
         );
@@ -140,14 +140,14 @@ describe("reports-repository (memory store)", () => {
 
       it("flags a repeat report for the same route, unit, and full problem set", async () => {
         const first = await createReportForRequest(
-          input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas", "acoso"] }),
+          input({ route: "VARGAS_ARAYA", unit: "24", problems: ["sin_accesibilidad", "acoso"] }),
           rider,
           new Date("2026-10-05T12:00:00Z"),
         );
         const second = await createReportForRequest(
           // Same problems, different submission order: the comparison is
           // order-insensitive.
-          input({ route: "VARGAS_ARAYA", unit: "24", problems: ["acoso", "cucarachas"] }),
+          input({ route: "VARGAS_ARAYA", unit: "24", problems: ["acoso", "sin_accesibilidad"] }),
           rider,
           new Date("2026-10-05T12:02:00Z"),
         );
@@ -158,7 +158,7 @@ describe("reports-repository (memory store)", () => {
 
       it("allows a second report for the same route and unit when the problem set differs", async () => {
         const first = await createReportForRequest(
-          input({ route: "VARGAS_ARAYA", unit: "24", problems: ["cucarachas"] }),
+          input({ route: "VARGAS_ARAYA", unit: "24", problems: ["sin_accesibilidad"] }),
           rider,
           new Date("2026-10-05T12:00:00Z"),
         );
@@ -306,7 +306,7 @@ describe("reports-repository (memory store)", () => {
       const now = new Date("2026-10-05T12:00:00Z");
       await createReportForRequest(input({ route: "CEDROS", unit: "A1", problems: ["hacinados"] }), null, now);
       await createReportForRequest(
-        input({ route: "CEDROS", unit: "A1", problems: ["cucarachas"] }),
+        input({ route: "CEDROS", unit: "A1", problems: ["sin_accesibilidad"] }),
         null,
         new Date(now.getTime() + 60_000),
       );
@@ -384,7 +384,7 @@ describe("reports-repository (memory store)", () => {
       await createReportForRequest(input({ route: "CEDROS", unit: "77", problems: ["hacinados"] }), null, now);
       // Same "now" clock as the request below (the "all" range window ends
       // at `now`, so a timestamp after it would be filtered out).
-      await createReportForRequest(input({ route: "CEDROS", unit: "77", problems: ["cucarachas"] }), null, now);
+      await createReportForRequest(input({ route: "CEDROS", unit: "77", problems: ["sin_accesibilidad"] }), null, now);
 
       const found = getMemoryUnitDetail({ range: "all", unit: "77", now });
       const missing = getMemoryUnitDetail({ range: "all", unit: "does-not-exist", now });

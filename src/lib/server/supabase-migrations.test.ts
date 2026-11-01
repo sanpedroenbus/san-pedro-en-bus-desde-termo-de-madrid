@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { COLLABORATION_INTERESTS } from "@/lib/domain/collaborators";
 import { PROBLEMS } from "@/lib/domain/problems";
 import { ROUTES } from "@/lib/domain/routes";
 
@@ -25,6 +26,8 @@ describe("Supabase migration: 0001_initial.sql", () => {
       "0005_collaborators.sql",
       "0006_catalogue_revision_and_carmiol.sql",
       "0007_scope_duplicates_to_origin.sql",
+      "0008_merge_problems.sql",
+      "0009_collaborator_canton_interest.sql",
     ]);
   });
 
@@ -219,8 +222,9 @@ describe("Supabase migration: 0006_catalogue_revision_and_carmiol.sql", () => {
   const [problemsSql, reportsRouteSql, unitsRouteSql] = migration0006.split(/alter table public\.\w+ drop constraint/).slice(1);
   const ids = (sql: string) => sql.match(/'([A-Za-z_]+)'/g)?.map((value) => value.replaceAll("'", "")) ?? [];
 
-  it("allows every current problem plus the retired one, and nothing else", () => {
-    expect(new Set(ids(problemsSql))).toEqual(new Set([...PROBLEMS, "no_paso_google_maps"]));
+  it("allows every current problem plus the retired and merged ones (0008), and nothing else", () => {
+    const retiredOrMerged = ["no_paso_google_maps", "nunca_paso", "paro_otro_lado", "cucarachas", "rampa_no_funciono", "discriminacion", "chofer_trato_mal", "pasajero_violento"];
+    expect(new Set(ids(problemsSql))).toEqual(new Set([...PROBLEMS, ...retiredOrMerged]));
   });
 
   it("allows exactly the current routes on both reports and units", () => {
@@ -242,5 +246,37 @@ describe("Supabase migration: 0007_scope_duplicates_to_origin.sql", () => {
       "grant execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) to service_role;",
     );
     expect(migration0007).toContain("revoke execute on function public.create_report(text, text, text[], text, text, timestamptz, timestamptz, timestamptz, int, timestamptz, timestamptz) from anon, authenticated;");
+  });
+});
+
+describe("Supabase migration: 0008_merge_problems.sql", () => {
+  const migration0008 = readFileSync(join(root, "supabase/migrations/0008_merge_problems.sql"), "utf8");
+
+  it("folds every merged id into a problem still in the catalogue", () => {
+    const merges = [...migration0008.matchAll(/when '([a-z_]+)' then '([a-z_]+)'/g)];
+    expect(merges).toHaveLength(6);
+    for (const [, from, to] of merges) {
+      expect(PROBLEMS).not.toContain(from);
+      expect(PROBLEMS).toContain(to);
+    }
+  });
+
+  it("rebuilds arrays distinct and sorted, and hides (never deletes) reports left only with the retired id", () => {
+    expect(migration0008).not.toMatch(/delete from/i);
+    expect(migration0008).toContain("select distinct case problem");
+    expect(migration0008).toContain("order by 1");
+    expect(migration0008).toContain("where problems = array['nunca_paso']::text[];");
+    expect(migration0008).toContain("and cardinality(problems) > 1");
+    expect(PROBLEMS).not.toContain("nunca_paso");
+  });
+});
+
+describe("Supabase migration: 0009_collaborator_canton_interest.sql", () => {
+  const migration0009 = readFileSync(join(root, "supabase/migrations/0009_collaborator_canton_interest.sql"), "utf8");
+
+  it("allows exactly the app's collaboration interests", () => {
+    const listed = migration0009.match(/array\[([^\]]*)\]/)?.[1].match(/'([a-z_]+)'/g)?.map((value) => value.replaceAll("'", ""));
+    expect(listed).toEqual([...COLLABORATION_INTERESTS]);
+    expect(migration0009).toContain("drop constraint collaborators_interests_check");
   });
 });

@@ -21,7 +21,7 @@ export function RecentReportRow({
 
   return (
     <div className="flex flex-col gap-1.5 py-3">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span
           className="rounded-sm px-1.5 py-1 text-xs font-bold"
           style={{
@@ -31,7 +31,7 @@ export function RecentReportRow({
         >
           {report.route}
         </span>
-        <p className="min-w-0 truncate font-mono text-sm font-semibold">{report.unit ?? dictionary.explore.noUnit}</p>
+        <p className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">{report.unit ?? dictionary.explore.noUnit}</p>
         <time className="whitespace-nowrap font-mono text-xs text-muted">{formatReportDateTime(report.createdAt, locale)}</time>
       </div>
       <div className="flex flex-wrap gap-1">

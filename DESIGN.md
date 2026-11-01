@@ -160,7 +160,7 @@ Two routes (La Europa at 220° and La Campiña at 250°) sit only 30° apart in 
 
 ### Problem categories
 
-Four categories, used only for the reports-per-category dashboard module — never for the problem-selector UI in the report form, which keeps all 20 problems equal-weight (see Named Rules). Currently drawn from the existing `SERIES_CHART_COLORS` palette in `src/lib/design/tokens.ts` (originally built for a since-removed car-series chart, now repurposed). A dedicated `CATEGORY_COLORS` token keyed by `fiabilidad` / `paradas` / `condicion` / `convivencia` should replace that repurposing once Phase 7 lands, so the naming stops implying an unrelated concept.
+Four categories, used only for the reports-per-category dashboard module — never for the problem-selector UI in the report form, which keeps all 13 problems equal-weight (see Named Rules). Currently drawn from the existing `SERIES_CHART_COLORS` palette in `src/lib/design/tokens.ts` (originally built for a since-removed car-series chart, now repurposed). A dedicated `CATEGORY_COLORS` token keyed by `fiabilidad` / `paradas` / `condicion` / `convivencia` should replace that repurposing once Phase 7 lands, so the naming stops implying an unrelated concept.
 
 ### Home actions
 
@@ -182,7 +182,7 @@ The two home actions use a black-and-yellow pair: Reportar is a black card (`--r
 
 **The Selected Fill Rule.** Unselected chips stay neutral with a colored dot or short mark. Selected chips may use the identity color as a fill with contrast-correct white or black text plus a check icon or outline.
 
-**The No Bait Rule.** In the problem selector, all 20 problems stay equal visual weight until selected. Grouping by category is for scannability only — never color-code or rank problems by severity within the form.
+**The No Bait Rule.** In the problem selector, all 13 problems stay equal visual weight until selected. Grouping by category is for scannability only — never color-code or rank problems by severity within the form.
 
 **The No Decorative Wallpaper Rule.** Color belongs in data, selected states, and primary action motion, not in the global page background. The global app glow is allowed only as a subtle neutral shell treatment.
 
@@ -268,14 +268,14 @@ The system is flat by default. Depth comes from tonal layering, borders, spacing
 
 ### Problem Selector
 
-Twenty problems grouped into four categories (`fiabilidad` labelled "Horarios", `paradas`, `condicion`, `convivencia`) as nested `<fieldset>`/`<legend>` sections under one outer "¿Qué pasó?" fieldset. Multi-select — a single trip commonly has more than one problem. Every option is an equal-weight toggle button regardless of category or position; grouping exists purely to make 20 options scannable on a phone, never to imply one problem matters more than another (see the No Bait Rule in §2).
+Thirteen problems grouped into four categories (`fiabilidad` labelled "Horarios", `paradas`, `condicion`, `convivencia`) as nested `<fieldset>`/`<legend>` sections under one outer "¿Qué pasó?" fieldset. Multi-select — a single trip commonly has more than one problem. Every option is an equal-weight toggle button regardless of category or position; grouping exists purely to make 13 options scannable on a phone, never to imply one problem matters more than another (see the No Bait Rule in §2).
 
 ### Dashboard Modules
 
 Dashboard modules are evidence blocks, not generic metric cards. The fixed module order:
 
 1. **Reports per route** — the lead module, horizontal bars in route-identity color, all 10 routes shown, never truncated. Never replaced or preceded by a single network-wide number.
-2. **Reports per problem** — horizontal bars across all 20 problems, single accent fill (not route or category color), value labels rather than relying on hover (mobile has no hover).
+2. **Reports per problem** — horizontal bars across all 13 problems, single accent fill (not route or category color), value labels rather than relying on hover (mobile has no hover).
 3. **Reports per category** — the 5-category rollup, a more scannable summary of #2, using the problem-category palette from §2.
 4. **Report volume over time** — line chart for the selected range, with a computed tick interval so long ranges (`Todo`, hundreds of daily buckets) don't produce overlapping date labels.
 5. **Most-reported units** — ranked list, clicking a row opens the unit explorer below.
@@ -319,7 +319,7 @@ The app is read one-handed on a moving bus. Layout serves glanceability first: o
 - **Don't** build a generic complaint counter that treats raw complaint volume as truth.
 - **Don't** lead with a single network average that hides a bad route.
 - **Don't** reintroduce a weighted scoring index, time decay, or fleet-coverage percentage.
-- **Don't** rank or color-code the 20 problems by severity in the report form.
+- **Don't** rank or color-code the 13 problems by severity in the report form.
 - **Don't** use glassmorphism or `backdrop-filter` blur on any surface — it is also a GPU cost on low-end phones.
 - **Don't** use border radii above 16px on cards, panels, or inputs.
 - **Don't** combine a 1px card border with soft shadows above 8px blur.

@@ -4,6 +4,7 @@ import { Share2 } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { getHomeShareUrl } from "@/components/ui/share-link-button";
 import { InfoTooltip } from "@/components/ui/tooltip";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
@@ -34,7 +35,7 @@ export function ChartCard({
   async function shareModule() {
     if (isSharing) return;
     setIsSharing(true);
-    const text = shareText ?? [title, rangeLabel, takeaway, caveat, dictionary.common.disclaimer].filter(Boolean).join("\n");
+    const text = [shareText ?? [title, rangeLabel, takeaway, caveat, dictionary.common.disclaimer].filter(Boolean).join("\n"), getHomeShareUrl()].join("\n");
     try {
       await letBusyStatePaint();
       const blob = await renderElementAsPng(cardRef.current);

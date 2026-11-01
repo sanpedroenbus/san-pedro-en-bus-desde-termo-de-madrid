@@ -33,9 +33,9 @@ test("report flow submits across categories, shows success feedback, and can be 
 
   // Multi-select across two different problem categories.
   await page.getByRole("button", { name: "No tiene horario claro para pasar" }).click(); // fiabilidad y horarios
-  await page.getByRole("button", { name: "Me acosaron" }).click(); // seguridad
+  await page.getByRole("button", { name: "Hubo discriminación, acoso o violencia" }).click(); // convivencia
   await expect(page.getByRole("button", { name: "No tiene horario claro para pasar" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "Me acosaron" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Hubo discriminación, acoso o violencia" })).toHaveAttribute("aria-pressed", "true");
 
   await page.getByPlaceholder("Ej: 51 o SJB 14285").fill(unit);
 
@@ -134,7 +134,7 @@ test("explore filters narrow the dashboard by problem", async ({ page }) => {
   await page.goto("/es/explorar?rango=all");
 
   const problemsSection = page.locator("#problems");
-  await expect(problemsSection.getByText("Había cucarachas", { exact: true })).toBeVisible();
+  await expect(problemsSection.getByText("Íbamos hacinados", { exact: true })).toBeVisible();
   const routeVolumeSection = page.locator("#report-volume");
   const totalBefore = await getTotalReports(routeVolumeSection);
 
@@ -142,13 +142,13 @@ test("explore filters narrow the dashboard by problem", async ({ page }) => {
   const filterDialog = page.locator(".centered-popover", { hasText: "Filtrar estadísticas" });
   await expect(filterDialog).toBeVisible();
 
-  await filterDialog.getByRole("button", { name: "Había cucarachas", exact: true }).click();
+  await filterDialog.getByRole("button", { name: "Íbamos hacinados", exact: true }).click();
   await page.getByRole("button", { name: "Aplicar filtros" }).click();
 
-  await expect(page).toHaveURL(/problema=cucarachas/);
+  await expect(page).toHaveURL(/problema=hacinados/);
 
   // Filtering by a single problem can only ever narrow the dataset (every
-  // remaining report carries "cucarachas", by definition of the filter) --
+  // remaining report carries "hacinados", by definition of the filter) --
   // it must never show as many or more reports than the unfiltered total.
   const totalAfter = await getTotalReports(routeVolumeSection);
   expect(totalAfter).toBeLessThan(totalBefore);
@@ -163,7 +163,7 @@ async function getTotalReports(section: import("@playwright/test").Locator) {
 test("report form links out to the open-ended report form", async ({ page }) => {
   await page.goto("/es/reportar");
 
-  const openReportLink = page.getByRole("link", { name: /Contánoslo acá/ });
+  const openReportLink = page.getByRole("link", { name: /Ponelo en la pizarra/ });
   await expect(openReportLink).toBeVisible();
   await expect(openReportLink).toHaveAttribute("target", "_blank");
   await expect(openReportLink).toHaveAttribute("href", /^https:\/\/docs\.google\.com\/forms\/d\/e\/[^/]+\/viewform\?usp=pp_url&entry\.2001078048=/);
@@ -172,13 +172,22 @@ test("report form links out to the open-ended report form", async ({ page }) => 
 test("schedules page summarizes authorized frequencies per route and links the official PDF", async ({ page, request }) => {
   await page.goto("/es/horarios");
 
-  await expect(page.getByRole("heading", { level: 1, name: "¿Sabías que el bus tiene reglas oficiales?" })).toBeVisible();
-  await expect(page.getByTestId("schedule-route")).toHaveCount(6);
+  await expect(page.getByRole("heading", { level: 1, name: "¿Conocés los horarios y las reglas del bus?" })).toBeVisible();
+  await expect(page.getByTestId("schedule-route")).toHaveCount(9);
   const granadilla = page.getByTestId("schedule-route").filter({ hasText: "Granadilla" });
   await expect(granadilla).toContainText("14 buses autorizados");
-  await expect(granadilla).toContainText("cada 6–30 min");
+  await expect(granadilla).toContainText("Mañana:10 min");
+  await expect(granadilla).toContainText("Noche:15 min");
+  // Weekends stay collapsed per card: opening Granadilla's leaves the others closed.
+  await expect(granadilla.getByText("Sábados", { exact: true })).toBeHidden();
+  await granadilla.getByText("Sábados, domingos y feriados").click();
+  await expect(granadilla.getByText("Sábados", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("schedule-route").filter({ hasText: "San Ramón" }).getByText("Sábados", { exact: true })).toBeHidden();
   await expect(page.getByTestId("schedule-route").filter({ hasText: "La Europa" })).toContainText("Sin servicio");
-  await expect(page.getByText("Vargas Araya, Barrio Pinto, Cedros: sin horario en este documento.")).toBeVisible();
+  const barrioPinto = page.getByTestId("schedule-route").filter({ hasText: "Barrio Pinto" });
+  await expect(barrioPinto.getByRole("link", { name: "Fuente: Moovit" })).toHaveAttribute("href", /moovitapp\.com\/.*barrio_pinto/);
+  await expect(barrioPinto).toContainText("cada 10–20 min");
+  await expect(page.getByText("Cedros: sin horario en este documento.")).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "Reportar", exact: true })).toHaveAttribute("href", "/es/reportar");
 
   const pdfLink = page.getByRole("link", { name: /Ver documento/ });
@@ -237,21 +246,21 @@ test("theme toggle switches the app to dark mode", async ({ page }) => {
   await expect(page.locator("html")).toHaveClass(/dark/);
 });
 
-test("the 16-problem selector stays reachable and unclipped on a 375px phone", async ({ page }) => {
+test("the 13-problem selector stays reachable and unclipped on a 375px phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/es/reportar");
 
-  const categories = ["Fiabilidad y horarios", "Paradas", "Seguridad", "Condición de la unidad", "Convivencia"];
+  const categories = ["Horarios", "Paradas", "Condición de la unidad", "Convivencia"];
   for (const category of categories) {
-    await expect(page.getByText(category, { exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: category, exact: true })).toBeVisible();
   }
 
   const problems = [
     "No tiene horario claro para pasar",
     "No hizo la parada",
-    "Me acosaron",
+    "Hubo discriminación, acoso o violencia",
     "Íbamos hacinados",
-    "El chofer me trató mal a mí o a otro pasajero",
+    "Una persona pasajera iba oyendo música o reels sin audífonos",
   ];
   const viewportWidth = page.viewportSize()!.width;
   for (const problem of problems) {
@@ -286,16 +295,16 @@ test("home report counter keeps four digits clear of its icon on a narrow phone"
 
 test("schedules page leads to the opt-in, which preselects tracking and confirms the sign-up", async ({ page }, testInfo) => {
   await page.goto("/es/horarios");
-  await page.getByRole("main").getByRole("link", { name: "Quiero participar" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Quiero sumarme" }).click();
   await page.waitForURL(/\/es\/colaborar\?interes=seguimiento/);
 
-  await expect(page.getByRole("heading", { level: 1, name: "Ayudanos a construir lo que sigue" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: /Saber dónde viene el bus/ })).toBeChecked();
-  await expect(page.getByRole("checkbox", { name: /Mapear las paradas/ })).not.toBeChecked();
+  await expect(page.getByRole("heading", { level: 1, name: "Quiero sumarme" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /Saber por dónde viene el bus/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Hacer un mapa de las paradas/ })).not.toBeChecked();
 
   await page.getByLabel("Correo").fill(`e2e-${testInfo.project.name}-${Date.now()}@ejemplo.cr`);
   await page.getByRole("checkbox", { name: /Acepto que San Pedro en Bus guarde/ }).check();
-  await page.getByRole("button", { name: "Quiero colaborar" }).click();
+  await page.getByRole("button", { name: "Quiero sumarme" }).click();
 
   await expect(page.getByRole("status")).toHaveText("¡Gracias! Te vamos a escribir cuando arranquemos.");
 });

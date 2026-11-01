@@ -121,7 +121,38 @@ export const AUTHORIZED_SERVICE: Partial<Record<Route, AuthorizedRouteService>> 
   },
 };
 
-export type FrequencySummary = { minMinutes: number; maxMinutes: number; averageMinutes: number; hasGaps: boolean };
+// Morning 04:00-11:59, afternoon 12:00-17:59, night 18:00-22:59.
+export const TIMES_OF_DAY = ["morning", "afternoon", "night"] as const;
+export type TimeOfDay = (typeof TIMES_OF_DAY)[number];
+
+function timeOfDay(hour: number): TimeOfDay {
+  return hour >= 18 ? "night" : hour >= 12 ? "afternoon" : "morning";
+}
+
+// averageMinutes is null for a band with no service at all.
+// Rider-app data for routes the CTP document leaves out, read from each line's
+// Moovit page. Not official: Moovit gives one [min, max] frequency per day, not
+// per hour, so these can't be split by time of day like the CTP schedules.
+export const MOOVIT_SOURCE = { checkedOn: "2026-10-31" } as const;
+const MOOVIT_LINE_URL = "https://moovitapp.com/index/es-419/transporte_p%C3%BAblico-line-";
+export const MOOVIT_FREQUENCIES: Partial<
+  Record<Route, { url: string; frequencies: Record<DayType, readonly [number, number]> }>
+> = {
+  VARGAS_ARAYA: {
+    url: `${MOOVIT_LINE_URL}san_jose_san_pedro_vargas_araya-San_Jose-2967-857932-48315313-1`,
+    frequencies: { weekday: [15, 15], saturday: [15, 15], sunday: [15, 15] },
+  },
+  BARRIO_PINTO: {
+    url: `${MOOVIT_LINE_URL}san_jose_san_pedro_barrio_pinto-San_Jose-2967-857932-48315312-0`,
+    frequencies: { weekday: [10, 20], saturday: [20, 30], sunday: [20, 30] },
+  },
+  CARMIOL: {
+    url: `${MOOVIT_LINE_URL}san_jos%c3%89_san_pedro_carmiol-San_Jose-2967-857932-48315311-0`,
+    frequencies: { weekday: [15, 15], saturday: [15, 15], sunday: [15, 15] },
+  },
+};
+
+export type FrequencySummary = { averageMinutes: Record<TimeOfDay, number | null>; hasGaps: boolean };
 
 // True when a direction has an hour without service between its first and last
 // departure, or runs less than half the day (La Europa: 3 rush-hour trips), so
@@ -134,15 +165,21 @@ function hasServiceGaps(hourly: HourlyFrequencies) {
   return last - first + 1 > serviceHours || serviceHours < hourly.length / 2;
 }
 
-// Plain mean of the hourly frequencies across both directions, over the hours
-// that have service -- not weighted by trips, matching the app's plain counting.
+// Per time of day, the plain mean of the hourly frequencies across both
+// directions, over the hours that have service -- not weighted by trips,
+// matching the app's plain counting.
 export function summarizeFrequencies(schedule: DirectionSchedule | undefined): FrequencySummary | null {
-  const values = schedule ? [...schedule.fromSanJose, ...schedule.toSanJose].filter((minutes) => minutes > 0) : [];
-  if (values.length === 0) return null;
+  if (!schedule) return null;
+  const values: Record<TimeOfDay, number[]> = { morning: [], afternoon: [], night: [] };
+  for (const hourly of [schedule.fromSanJose, schedule.toSanJose]) {
+    hourly.forEach((minutes, index) => {
+      if (minutes > 0) values[timeOfDay(index + SCHEDULE_FIRST_HOUR)].push(minutes);
+    });
+  }
+  if (TIMES_OF_DAY.every((band) => values[band].length === 0)) return null;
+  const mean = (list: number[]) => (list.length ? Math.round(list.reduce((sum, minutes) => sum + minutes, 0) / list.length) : null);
   return {
-    minMinutes: Math.min(...values),
-    maxMinutes: Math.max(...values),
-    averageMinutes: Math.round(values.reduce((sum, minutes) => sum + minutes, 0) / values.length),
-    hasGaps: hasServiceGaps(schedule!.fromSanJose) || hasServiceGaps(schedule!.toSanJose),
+    averageMinutes: { morning: mean(values.morning), afternoon: mean(values.afternoon), night: mean(values.night) },
+    hasGaps: hasServiceGaps(schedule.fromSanJose) || hasServiceGaps(schedule.toSanJose),
   };
 }
