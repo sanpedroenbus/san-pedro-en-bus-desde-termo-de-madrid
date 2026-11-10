@@ -23,6 +23,14 @@ import { isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary, type Dictionary } from "@/lib/i18n/dictionaries";
 import { formatLongDate, formatNumber } from "@/lib/i18n/format";
 import { cn } from "@/lib/utils";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  return buildPageMetadata(lang, await getDictionary(lang), "schedules");
+}
 
 export default async function SchedulesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

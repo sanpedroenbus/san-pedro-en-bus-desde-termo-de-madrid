@@ -38,7 +38,7 @@ export async function HomePageContent({
       <section className="mx-auto flex max-w-5xl flex-col px-4 pb-5 pt-7 sm:pt-12">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-5">
           <TrainSilhouette />
-          <p className="mx-auto max-w-md text-center text-pretty text-sm leading-5 text-muted sm:text-base sm:leading-6">{dictionary.home.mission}</p>
+          <h1 className="mx-auto max-w-md text-center text-pretty text-sm font-normal leading-5 text-muted sm:text-base sm:leading-6">{dictionary.home.mission}</h1>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Button asChild className="home-report-action min-h-0 justify-between rounded-md py-1.5 pl-3 pr-6 text-left text-white [&_*]:text-white" data-testid="home-report" variant="primary">

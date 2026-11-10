@@ -3,6 +3,14 @@ import { ReportActionIcon } from "@/components/ui/action-icons";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  return buildPageMetadata(lang, await getDictionary(lang), "report");
+}
 
 export default async function ReportPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

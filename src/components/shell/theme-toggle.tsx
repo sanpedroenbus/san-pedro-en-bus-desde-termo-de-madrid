@@ -1,12 +1,24 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
+const subscribeToNothing = () => () => {};
+
+// false during SSR and hydration, true once running in the browser. The saved
+// theme lives in localStorage, which the server can't read, so until then the
+// switch must render exactly what the server did (light) to avoid a hydration
+// mismatch for dark-mode visitors (makeover.md P17).
+function useIsClient() {
+  return useSyncExternalStore(subscribeToNothing, () => true, () => false);
+}
+
 export function ThemeSegmentedSwitch({ label, lightLabel, darkLabel }: { label: string; lightLabel: string; darkLabel: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const isClient = useIsClient();
+  const isDark = isClient && resolvedTheme === "dark";
 
   return (
     <div>

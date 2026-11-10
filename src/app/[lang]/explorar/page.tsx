@@ -10,6 +10,14 @@ import { parseDashboardRange, parseSelectedProblems, parseSelectedRoutes } from 
 import { normalizeUnitLookup } from "@/lib/domain/reports";
 import { notFound } from "next/navigation";
 import ExploreLoading from "./loading";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  return buildPageMetadata(lang, await getDictionary(lang), "explore");
+}
 
 export default async function ExplorePage({
   params,

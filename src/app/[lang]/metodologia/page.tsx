@@ -12,6 +12,8 @@ import { isLocale } from "@/lib/i18n/config";
 import { notFound } from "next/navigation";
 import { ChevronDown, CircleHelp } from "lucide-react";
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 const ORIGIN_PROJECT_URL = "https://github.com/nachoggodino/termometro";
 
@@ -27,6 +29,12 @@ const LIMIT_VALUES: Record<string, number> = {
 
 function fillLimits(template: string) {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in LIMIT_VALUES ? String(LIMIT_VALUES[key]) : match));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  return buildPageMetadata(lang, await getDictionary(lang), "methodology");
 }
 
 export default async function MethodologyPage({ params }: { params: Promise<{ lang: string }> }) {

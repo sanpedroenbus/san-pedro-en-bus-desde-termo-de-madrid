@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/app-shell";
 import { LangAttribute } from "@/components/shell/lang-attribute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ServiceWorkerRegistration } from "@/components/shell/service-worker";
 import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+
+// Seed/demo data must never appear in search results as if it were real.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // Mirrors src/app/[lang]/layout.tsx's shell wrapping, hardcoded to the one
 // live locale -- /demo sits outside the [lang] segment (it needs a stable

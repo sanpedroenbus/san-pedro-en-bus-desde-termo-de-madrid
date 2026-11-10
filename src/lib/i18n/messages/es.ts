@@ -7,6 +7,40 @@ export const messages = {
       "Reportá y explorá señales de pasajeros sobre problemas en las rutas de buses de San Pedro.",
     socialImageAlt:
       "Vista previa de San Pedro en Bus con un resumen de reportes de pasajeros del servicio de buses",
+    // Per-page <title> and meta description for search results. Subpage titles
+    // get " · San Pedro en Bus" appended; the home title is used as-is.
+    pages: {
+      home: {
+        title: "San Pedro en Bus · Reportá lo que pasa con el bus",
+        description:
+          "Reportá en segundos y sin cuenta los problemas del bus en las rutas de San Pedro: atrasos, paradas, hacinamiento y más. Proyecto ciudadano.",
+      },
+      report: {
+        title: "Reportar un problema con el bus",
+        description:
+          "Contanos en segundos qué está pasando en tu bus de San Pedro: la ruta, el problema y, si querés, la unidad o placa. Anónimo y sin cuenta.",
+      },
+      explore: {
+        title: "Estadísticas de reportes por ruta",
+        description:
+          "Mirá cuántos reportes tiene cada ruta de bus de San Pedro, qué problemas se repiten y qué unidades acumulan más reportes.",
+      },
+      schedules: {
+        title: "Horarios y reglas de los buses de San Pedro",
+        description:
+          "Horarios, frecuencias y reglas de operación de las rutas de bus de San Pedro (La Campiña, Granadilla, Sabanilla, Barrio Pinto y más), según el permiso público del CTP.",
+      },
+      methodology: {
+        title: "Misión y metodología",
+        description:
+          "Por qué existe San Pedro en Bus, cómo cuenta los reportes de pasajeros y qué límites aplica para evitar reportes duplicados.",
+      },
+      collaborate: {
+        title: "Sumate al proyecto",
+        description:
+          "Dejá tu contacto para ayudar a mapear paradas, saber por dónde viene el bus o llevar San Pedro en Bus a tu cantón.",
+      },
+    },
   },
   common: {
     appName: "San Pedro en Bus",

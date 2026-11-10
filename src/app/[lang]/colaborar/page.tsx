@@ -3,6 +3,14 @@ import { notFound } from "next/navigation";
 import { CollaborateForm } from "@/components/collaborate/collaborate-form";
 import { isLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  return buildPageMetadata(lang, await getDictionary(lang), "collaborate");
+}
 
 export default async function CollaboratePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
