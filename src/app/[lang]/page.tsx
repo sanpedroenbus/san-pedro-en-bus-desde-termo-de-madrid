@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getCachedHomeSnapshot } from "@/lib/server/dashboard-cache";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale, type Locale } from "@/lib/i18n/config";
-import { ROUTE_COLORS, type Route } from "@/lib/domain/routes";
+import { ROUTE_COLORS, ROUTE_LABELS, type Route } from "@/lib/domain/routes";
 import type { Report } from "@/lib/domain/reports";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -128,7 +128,7 @@ async function HomeReports({
                     color: ROUTE_COLORS[route].fill,
                   }}
                   >
-                    {route}
+                    {ROUTE_LABELS[route]}
                     <span className="mx-0.5 text-muted">·</span>
                     {reports}
                   </span>

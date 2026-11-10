@@ -64,6 +64,7 @@ export const messages = {
     success: "Reporte guardado. Gracias por reportar con sinceridad",
     duplicate: "Ya registramos este reporte hace un momento",
     rateLimited: "Demasiados reportes seguidos. Esperá unos minutos antes de enviar otro",
+    cooldown: "Para evitar reportes duplicados, podés enviar otro en {minutes} min",
     invalid: "Elegí al menos un problema para poder enviar el reporte",
     submitFailed: "No se pudo enviar el reporte. Intentalo otra vez",
     undo: "Deshacer",

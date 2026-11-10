@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SquareArrowOutUpRight, TriangleAlert } from "lucide-react";
+import { Clock, SquareArrowOutUpRight, TriangleAlert } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { offerInstall } from "@/components/shell/install-prompt";
@@ -17,7 +17,14 @@ import type { Locale } from "@/lib/i18n/config";
 import { ProblemSelector } from "./problem-selector";
 import { getLastReportRoute, saveLastReportRoute } from "./last-route";
 import { getOpenReportFormUrl } from "./open-report-form";
-import { clearReportCooldown, getReportCooldownRemainingMs, markReportSubmitted, REPORT_COOLDOWN_MS } from "./report-cooldown";
+import {
+  clearReportCooldown,
+  getCooldownMinutesLeft,
+  getReportCooldownRemainingMs,
+  markReportSubmitted,
+  REPORT_COOLDOWN_MS,
+  REPORT_COOLDOWN_TICK_MS,
+} from "./report-cooldown";
 import { RoutePicker } from "./route-picker";
 
 type ApiErrorReason = "duplicate" | "invalid" | "rate_limited" | "server_error";
@@ -39,6 +46,7 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
   const cooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const missingUnitTitleId = useId();
   const missingUnitDescriptionId = useId();
+  const cooldownHintId = useId();
 
   const normalizedUnit = useMemo(() => normalizeUnitCode(unit), [unit]);
   const unitError = unit && !normalizedUnit ? dictionary.reportForm.unitInvalid : null;
@@ -63,6 +71,16 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
       if (cooldownTimeoutRef.current) clearTimeout(cooldownTimeoutRef.current);
     };
   }, []);
+
+  // Counts the visible hint down; the timeouts above still end the cooldown exactly.
+  useEffect(() => {
+    if (!onCooldown) return;
+    const interval = setInterval(
+      () => setCooldownRemainingMs((remaining) => Math.max(0, remaining - REPORT_COOLDOWN_TICK_MS)),
+      REPORT_COOLDOWN_TICK_MS,
+    );
+    return () => clearInterval(interval);
+  }, [onCooldown]);
 
   function startCooldown() {
     if (cooldownTimeoutRef.current) clearTimeout(cooldownTimeoutRef.current);
@@ -202,9 +220,22 @@ export function ReportForm({ dictionary, locale }: { dictionary: Dictionary; loc
         </a>
       </p>
 
-      {problems.length === 0 ? <p className="text-xs text-muted">{dictionary.reportForm.invalid}</p> : null}
+      {onCooldown ? (
+        <p
+          aria-live="polite"
+          className="flex items-start gap-2 rounded-md border border-warning bg-warning/15 px-3 py-2 text-sm font-semibold leading-5 text-foreground"
+          data-testid="report-cooldown"
+          id={cooldownHintId}
+        >
+          <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+          <span>{dictionary.reportForm.cooldown.replace("{minutes}", String(getCooldownMinutesLeft(cooldownRemainingMs)))}</span>
+        </p>
+      ) : problems.length === 0 ? (
+        <p className="text-xs text-muted">{dictionary.reportForm.invalid}</p>
+      ) : null}
 
       <Button
+        aria-describedby={onCooldown ? cooldownHintId : undefined}
         className="home-report-action report-submit-action relative min-h-12 overflow-hidden"
         data-testid="submit-report"
         disabled={busy || onCooldown || problems.length === 0 || Boolean(unitError)}

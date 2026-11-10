@@ -4,6 +4,14 @@
 // the average rider, complementing the server-side abuse-key rate limit.
 const STORAGE_KEY = "sanpedroenbus:lastReportAt";
 export const REPORT_COOLDOWN_MS = 5 * 60_000;
+// How often the visible "wait N min" countdown refreshes while on cooldown.
+export const REPORT_COOLDOWN_TICK_MS = 1_000;
+
+// Whole minutes left, rounded up, so the hint never says "0 min" while the
+// button is still disabled.
+export function getCooldownMinutesLeft(remainingMs: number): number {
+  return Math.max(0, Math.ceil(remainingMs / 60_000));
+}
 
 export function getReportCooldownRemainingMs(now = Date.now()): number {
   try {

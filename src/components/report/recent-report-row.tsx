@@ -1,4 +1,4 @@
-import { ROUTE_COLORS } from "@/lib/domain/routes";
+import { ROUTE_COLORS, ROUTE_LABELS } from "@/lib/domain/routes";
 import type { Report } from "@/lib/domain/reports";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -29,7 +29,7 @@ export function RecentReportRow({
             color: ROUTE_COLORS[report.route].textOnFill,
           }}
         >
-          {report.route}
+          {ROUTE_LABELS[report.route]}
         </span>
         <p className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">{report.unit ?? dictionary.explore.noUnit}</p>
         <time className="whitespace-nowrap font-mono text-xs text-muted">{formatReportDateTime(report.createdAt, locale)}</time>

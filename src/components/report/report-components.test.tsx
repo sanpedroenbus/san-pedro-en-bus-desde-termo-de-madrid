@@ -106,7 +106,7 @@ describe("RecentReportRow", () => {
   it("shows the route, the unit code, and problem chips instead of a heat-state badge", () => {
     render(<RecentReportRow dictionary={esMessages} locale="es" report={report({ unit: "51", problems: ["hacinados", "sin_accesibilidad"] })} />);
 
-    expect(screen.getByText("CEDROS")).toBeInTheDocument();
+    expect(screen.getByText("Cedros")).toBeInTheDocument();
     expect(screen.getByText("51")).toBeInTheDocument();
     expect(screen.getByText(getProblemLabel(esMessages, "hacinados"))).toBeInTheDocument();
     expect(screen.getByText(getProblemLabel(esMessages, "sin_accesibilidad"))).toBeInTheDocument();
