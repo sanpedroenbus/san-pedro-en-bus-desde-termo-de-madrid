@@ -67,6 +67,8 @@ export const messages = {
     shareImageUnavailable: "No se pudo generar la imagen",
     optional: "opcional",
     attribution: "Datos de pasajeros en San Pedro en Bus",
+    instagramLabel: "Seguinos en Instagram",
+    instagramHandle: "@sanpedroenbus",
   },
   home: {
     mission: "Que se sepa lo que pasa con el bus.",

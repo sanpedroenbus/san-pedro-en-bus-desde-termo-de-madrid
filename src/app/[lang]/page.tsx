@@ -4,11 +4,13 @@ import { Bus, Clock3, Flame } from "lucide-react";
 import { RecentReportRow } from "@/components/report/recent-report-row";
 import { ExploreActionIcon, ReportActionIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
+import { InstagramIcon } from "@/components/ui/social-icons";
 import { getCachedHomeSnapshot } from "@/lib/server/dashboard-cache";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { ROUTE_COLORS, ROUTE_LABELS, type Route } from "@/lib/domain/routes";
 import type { Report } from "@/lib/domain/reports";
+import { INSTAGRAM_URL } from "@/lib/social";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
@@ -75,7 +77,20 @@ export async function HomePageContent({
             <HomeReports dictionary={dictionary} includeDemo={includeDemo} locale={lang} />
           </Suspense>
 
-          <p className="text-center text-xs text-muted">{dictionary.common.disclaimer}</p>
+          <div className="flex flex-col items-center gap-2">
+            <a
+              aria-label={dictionary.common.instagramLabel}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              data-testid="home-instagram"
+              href={INSTAGRAM_URL}
+              rel="me noreferrer"
+              target="_blank"
+            >
+              <InstagramIcon className="size-4" />
+              {dictionary.common.instagramHandle}
+            </a>
+            <p className="text-center text-xs text-muted">{dictionary.common.disclaimer}</p>
+          </div>
         </div>
       </section>
     </main>
